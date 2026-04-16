@@ -3,6 +3,7 @@
   "outputDirectory": "dist/frontend/browser",
   "framework": null,
   "rewrites": [
+    { "source": "/api/:path*", "destination": "https://nhl-pool.onrender.com/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

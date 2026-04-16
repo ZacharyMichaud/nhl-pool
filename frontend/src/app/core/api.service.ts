@@ -2,9 +2,9 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
-const API = window.location.hostname === 'localhost'
-  ? 'http://localhost:8080/api'
-  : 'https://nhl-pool.onrender.com/api';
+// In production: Vercel proxies /api/* → Render (no CORS)
+// In dev: ng serve uses proxy.conf.json → localhost:8080
+const API = '/api';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
