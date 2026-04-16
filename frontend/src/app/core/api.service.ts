@@ -1,9 +1,15 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
 
-const API = environment.apiUrl;
+function getApiUrl(): string {
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return 'https://nhl-pool.onrender.com/api';
+  }
+  return 'http://localhost:8080/api';
+}
+
+const API = getApiUrl();
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
