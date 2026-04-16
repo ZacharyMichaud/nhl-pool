@@ -1,4 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8080/api',
+  apiUrl: (typeof window !== 'undefined' && window.location.hostname !== 'localhost')
+    ? 'https://nhl-pool.onrender.com/api'
+    : 'http://localhost:8080/api',
 };
