@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://nhl-pool-mu.vercel.app',
+  apiUrl: 'https://nhl-pool.onrender.com/api',
 };
