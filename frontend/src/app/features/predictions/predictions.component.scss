@@ -1,0 +1,92 @@
+.round-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+
+  button {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &.active {
+      background: var(--accent-glow);
+      color: var(--accent);
+      border-color: rgba(0, 195, 255, 0.3);
+    }
+  }
+}
+
+.series-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.matchup {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  justify-content: center;
+}
+
+.team-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  &.winner .team-abbrev {
+    color: var(--success);
+  }
+}
+
+.team-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.team-abbrev {
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.team-wins {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.vs {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.prediction-form {
+  display: flex;
+  gap: 8px;
+  align-items: start;
+}
+
+.pred-field {
+  flex: 1;
+}
+
+.empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px;
+}

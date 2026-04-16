@@ -1,0 +1,133 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Draft Board</h1>
+    <p>
+      <ng-container *ngIf="config()?.status === 'IN_PROGRESS'">🟢 Draft is live — Pick #{{ config()?.currentPickNumber }}</ng-container>
+      <ng-container *ngIf="config()?.status === 'COMPLETED'">✅ Draft complete!</ng-container>
+      <ng-container *ngIf="config()?.status !== 'IN_PROGRESS' && config()?.status !== 'COMPLETED'">⏳ Draft hasn't started yet</ng-container>
+    </p>
+  </div>
+
+  <div class="draft-layout">
+    <!-- Available Players -->
+    <div class="card players-panel">
+      <h2>Available Players</h2>
+      <div class="filters">
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Search</mat-label>
+          <input matInput [(ngModel)]="searchQuery" (ngModelChange)="filterPlayers()" placeholder="Player name...">
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Team</mat-label>
+          <mat-select [(ngModel)]="selectedTeam" (ngModelChange)="loadPlayers()">
+            <mat-option value="">All Teams</mat-option>
+            <mat-option *ngFor="let t of teams" [value]="t">{{ t }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Position</mat-label>
+          <mat-select [(ngModel)]="selectedPosition" (ngModelChange)="loadPlayers()">
+            <mat-option value="">All</mat-option>
+            <mat-option value="C">C</mat-option>
+            <mat-option value="L">LW</mat-option>
+            <mat-option value="R">RW</mat-option>
+            <mat-option value="D">D</mat-option>
+            <mat-option value="G">G</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <!-- Split + Mode Toggles -->
+      <div class="toggle-row">
+        <div class="toggle-group">
+          <button *ngFor="let s of splitOptions"
+                  [class.active]="selectedSplit === s.value"
+                  (click)="selectedSplit = s.value; filterPlayers()">
+            {{ s.label }}
+          </button>
+        </div>
+        <div class="toggle-group">
+          <button [class.active]="!perGameMode" (click)="perGameMode = false; filterPlayers()">Totals</button>
+          <button [class.active]="perGameMode" (click)="perGameMode = true; filterPlayers()">Per Game</button>
+        </div>
+      </div>
+
+      <!-- Sortable Stats Table -->
+      <div class="stats-table-wrapper">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th class="col-player">Player</th>
+              <th class="col-pos">Pos</th>
+              <th class="col-team">Team</th>
+              <th class="col-stat sortable" (click)="sortBy('gp')" [class.active]="sortColumn === 'gp'">
+                GP <span class="sort-arrow">{{ getSortArrow('gp') }}</span>
+              </th>
+              <th class="col-stat sortable" (click)="sortBy('g')" [class.active]="sortColumn === 'g'">
+                G <span class="sort-arrow">{{ getSortArrow('g') }}</span>
+              </th>
+              <th class="col-stat sortable" (click)="sortBy('a')" [class.active]="sortColumn === 'a'">
+                A <span class="sort-arrow">{{ getSortArrow('a') }}</span>
+              </th>
+              <th class="col-stat sortable" (click)="sortBy('pts')" [class.active]="sortColumn === 'pts'">
+                PTS <span class="sort-arrow">{{ getSortArrow('pts') }}</span>
+              </th>
+              <th class="col-stat sortable" (click)="sortBy('ppg')" [class.active]="sortColumn === 'ppg'">
+                P/GP <span class="sort-arrow">{{ getSortArrow('ppg') }}</span>
+              </th>
+              <th class="col-stat sortable" (click)="sortBy('pwg')" [class.active]="sortColumn === 'pwg'">
+                PPG <span class="sort-arrow">{{ getSortArrow('pwg') }}</span>
+              </th>
+              <th class="col-stat sortable" (click)="sortBy('ppp')" [class.active]="sortColumn === 'ppp'">
+                PPP <span class="sort-arrow">{{ getSortArrow('ppp') }}</span>
+              </th>
+              <th class="col-stat sortable" *ngIf="selectedSplit === 'full'" (click)="sortBy('toi')" [class.active]="sortColumn === 'toi'">
+                TOI/GP <span class="sort-arrow">{{ getSortArrow('toi') }}</span>
+              </th>
+              <th class="col-action" *ngIf="config()?.status === 'IN_PROGRESS'"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of filteredPlayers()" class="player-row">
+              <td class="col-player">
+                <div class="player-cell">
+                  <img [src]="p.headshotUrl" class="player-headshot" loading="lazy" onerror="this.style.display='none'">
+                  <span class="player-name">{{ p.firstName }} {{ p.lastName }}</span>
+                </div>
+              </td>
+              <td class="col-pos">{{ p.position }}</td>
+              <td class="col-team">{{ p.teamAbbrev }}</td>
+              <td class="col-stat">{{ getStat(p, 'gp') }}</td>
+              <td class="col-stat">{{ getDisplayStat(p, 'g') }}</td>
+              <td class="col-stat">{{ getDisplayStat(p, 'a') }}</td>
+              <td class="col-stat highlight">{{ getDisplayStat(p, 'pts') }}</td>
+              <td class="col-stat">{{ getDisplayStat(p, 'ppg') }}</td>
+              <td class="col-stat">{{ getDisplayStat(p, 'pwg') }}</td>
+              <td class="col-stat">{{ getDisplayStat(p, 'ppp') }}</td>
+              <td class="col-stat" *ngIf="selectedSplit === 'full'">{{ p.regularSeasonAvgToi || '-' }}</td>
+              <td class="col-action" *ngIf="config()?.status === 'IN_PROGRESS' && isMyTurn()">
+                <button class="btn-primary pick-btn" (click)="$event.stopPropagation(); draftPlayer(p)">Pick</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p *ngIf="filteredPlayers().length === 0" class="empty">No available players found</p>
+      </div>
+    </div>
+
+    <!-- Draft History -->
+    <div class="card history-panel">
+      <h2>Draft History</h2>
+      <div *ngFor="let pick of board()" class="pick-row">
+        <span class="pick-num">#{{ pick.pickNumber }}</span>
+        <img [src]="pick.player?.headshotUrl" class="pick-headshot" loading="lazy" onerror="this.style.display='none'">
+        <div class="pick-info">
+          <span class="pick-player">{{ pick.player?.firstName }} {{ pick.player?.lastName }}</span>
+          <span class="pick-team">{{ pick.team?.name }}</span>
+        </div>
+        <span class="pick-pos">{{ pick.player?.position }}</span>
+      </div>
+      <p *ngIf="board().length === 0" class="empty">No picks yet</p>
+    </div>
+  </div>
+</div>

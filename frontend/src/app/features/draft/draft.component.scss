@@ -1,0 +1,230 @@
+.draft-layout {
+  display: grid;
+  grid-template-columns: 2.5fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1100px) {
+  .draft-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+h2 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-field {
+  flex: 1;
+  min-width: 120px;
+}
+
+// ── Toggle Buttons ──
+.toggle-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.toggle-group {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+
+  button {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    border-right: 1px solid var(--border);
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    &.active {
+      background: var(--accent-glow);
+      color: var(--accent);
+    }
+  }
+}
+
+// ── Sortable Stats Table ──
+.stats-table-wrapper {
+  max-height: 65vh;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg-card);
+  }
+
+  th {
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--border);
+    user-select: none;
+
+    &.sortable {
+      cursor: pointer;
+      transition: color 0.15s;
+
+      &:hover,
+      &.active {
+        color: var(--accent);
+      }
+    }
+  }
+
+  td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .col-stat {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+
+    &.highlight {
+      color: var(--accent);
+      font-weight: 700;
+    }
+  }
+
+  th.col-stat {
+    text-align: right;
+  }
+
+  .col-pos,
+  .col-team {
+    color: var(--text-secondary);
+  }
+
+  .col-action {
+    text-align: center;
+    width: 60px;
+  }
+
+  tbody tr {
+    cursor: pointer;
+    transition: background 0.12s;
+
+    &:hover {
+      background: rgba(0, 195, 255, 0.04);
+    }
+  }
+}
+
+.player-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-headshot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.player-name {
+  font-weight: 600;
+}
+
+.sort-arrow {
+  font-size: 9px;
+  margin-left: 2px;
+}
+
+.pick-btn {
+  padding: 4px 12px;
+  font-size: 11px;
+}
+
+// ── Draft History Panel ──
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.pick-num {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 28px;
+}
+
+.pick-headshot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-secondary);
+}
+
+.pick-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.pick-player {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.pick-team {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.pick-pos {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px;
+}

@@ -1,0 +1,99 @@
+[versions]
+lombokVersion = '1.18.36'
+bucket4jVersion = '7.6.0'
+checkstyleVersion = '10.12.3'
+commonsCollectionsVersion = '4.0'
+commonsTextVersion = '1.12.0'
+dropboxSignVersion = '2.6.0'
+errorproneVersion = "2.34.0"
+flyingSaucerVersion = "9.2.2"
+gradleDagVersion = "1.6.0"
+guavaVersion = '33.5.0-jre'
+hibernateTypeVersion = '3.15.1'
+jacocoVersion = '0.8.12'
+jakartaXmlWsVersion = '4.0.0'
+jaxwsRtVersion = '4.0.2'
+jschVersion = '0.1.55'
+jsonWebTokenVersion = '0.11.5'
+lombokMapstructBindingVersion = '0.2.0'
+mapstructVersion = '1.5.5.Final'
+mockitoCoreVersion = '5.17.0'
+mssqlJdbcVersion = '12.4.1.jre11'
+mysqlConnectorVersion = '9.1.0'
+opencsvVersion = '5.8'
+oktaSdkVersion = '8.2.3'
+oktaManagementSdkVersion = '20.0.0'
+oktaHttpLegacyVersion = '8.2.5'
+oktaSpringBootVersion = '3.0.6'
+pdfnetVersion = '10.10.0'
+restAssuredVersion = '5.3.2'
+sendgridVersion = '4.9.3'
+sentryVersion = '7.22.0'
+springBootVersionSpring3 = '3.5.9' # Spring boot 3
+springCloudAwsVersion = '3.4.2'
+springCloudGcpVersion = '7.4.3'
+springdocOpenapiUiVersion = '2.8.4'
+twilioVersion = '8.0.0'
+wsImportVersion = '0.19'
+zxingVersion = '3.5.3'
+
+[libraries]
+bucket4jCore = { module = "com.github.vladimir-bukhtoyarov:bucket4j-core", version.ref = "bucket4jVersion" }
+commonsCollections = { module = "org.apache.commons:commons-collections4", version.ref = "commonsCollectionsVersion" }
+commonsText = { module = "org.apache.commons:commons-text", version.ref = "commonsTextVersion" }
+dropboxSign = { module = "com.dropbox.sign:dropbox-sign", version.ref = "dropboxSignVersion" }
+errorproneCore = { module = "com.google.errorprone:error_prone_core", version.ref = "errorproneVersion" }
+flyingSaucerPdf = { module = "org.xhtmlrenderer:flying-saucer-pdf", version.ref = "flyingSaucerVersion" }
+gradleDagCommand = { module = "com.github.leandroborgesferreira:dag-command", version.ref = "gradleDagVersion" }
+guava = { module = "com.google.guava:guava", version.ref = "guavaVersion" }
+hibernateTypes = { module = "io.hypersistence:hypersistence-utils-hibernate-63", version.ref = "hibernateTypeVersion" }
+jacksonDatabind = { module = "com.fasterxml.jackson.core:jackson-databind" }
+jacksonModuleJakartaXmlbindAnnotations = { module = "com.fasterxml.jackson.module:jackson-module-jakarta-xmlbind-annotations" }
+jacksonModuleJdk8 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jdk8" }
+jsch = { module = "com.jcraft:jsch", version.ref = "jschVersion" }
+jjwtApi = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jsonWebTokenVersion" }
+jakartaXmlWsApi = { module = "jakarta.xml.ws:jakarta.xml.ws-api", version.ref = "jakartaXmlWsVersion" }
+jaxwsRt = { module = "com.sun.xml.ws:jaxws-rt", version.ref = "jaxwsRtVersion" }
+jjwtImpl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jsonWebTokenVersion" }
+jjwtJackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jsonWebTokenVersion" }
+kafka = { module = "org.springframework.kafka:spring-kafka" }
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombokVersion" }
+lombokMapstructBinding = { module = "org.projectlombok:lombok-mapstruct-binding", version.ref = "lombokMapstructBindingVersion" }
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstructVersion" }
+mapstructProcessor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstructVersion" }
+mockitoCore = { module = "org.mockito:mockito-core", version.ref = "mockitoCoreVersion" }
+mssqlJdbc = { module = "com.microsoft.sqlserver:mssql-jdbc", version.ref = "mssqlJdbcVersion" }
+mysqlConnectorJava = { module = "com.mysql:mysql-connector-j", version.ref = "mysqlConnectorVersion" }
+opencsv = { module = "com.opencsv:opencsv", version.ref = "opencsvVersion" }
+oktaApi = { module = "com.okta.sdk:okta-sdk-api", version.ref = "oktaSdkVersion" }
+oktaImpl = { module = "com.okta.sdk:okta-sdk-impl", version.ref = "oktaSdkVersion" }
+oktaHttpclient = { module = "com.okta.sdk:okta-sdk-httpclient", version.ref = "oktaHttpLegacyVersion" }
+oktaSpringBootStarter = { module = "com.okta.spring:okta-spring-boot-starter", version.ref = "oktaSpringBootVersion" }
+oktaManagementApi = { module = "com.okta.sdk:okta-sdk-api", version.ref = "oktaManagementSdkVersion" }
+oktaManagementImpl = { module = "com.okta.sdk:okta-sdk-impl", version.ref = "oktaManagementSdkVersion" }
+pdfnet = { module = "com.pdftron:PDFNet", version.ref = "pdfnetVersion" }
+reactorTools = { module = "io.projectreactor:reactor-tools" }
+restAssured = { module = "io.rest-assured:rest-assured", version.ref = "restAssuredVersion" }
+restAssuredAll = { module = "io.rest-assured:rest-assured-all", version.ref = "restAssuredVersion" }
+restAssuredJsonPath = { module = "io.rest-assured:json-path", version.ref = "restAssuredVersion" }
+restAssuredXmlPath = { module = "io.rest-assured:xml-path", version.ref = "restAssuredVersion" }
+sendgridJava = { module = "com.sendgrid:sendgrid-java", version.ref = "sendgridVersion" }
+sentrySpringBootStarter = { module = "io.sentry:sentry-spring-boot-starter-jakarta", version.ref = "sentryVersion" }
+sentryLogback = { module = "io.sentry:sentry-logback", version.ref = "sentryVersion" }
+springBootDependencies3 = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "springBootVersionSpring3" }
+springCloudAwsDependencies = { module = "io.awspring.cloud:spring-cloud-aws-dependencies", version.ref = "springCloudAwsVersion" }
+springCloudAwsStarter = { module = "io.awspring.cloud:spring-cloud-aws-starter" }
+springCloudAwsStarterS3 = { module = "io.awspring.cloud:spring-cloud-aws-starter-s3" }
+springCloudAwsStarterSns = { module = "io.awspring.cloud:spring-cloud-aws-starter-sns" }
+springCloudGcpDependencies = { module = "com.google.cloud:spring-cloud-gcp-dependencies", version.ref = "springCloudGcpVersion" }
+springdocOpenapiUi = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdocOpenapiUiVersion" }
+springSecurityOauth2Jose = { module = "org.springframework.security:spring-security-oauth2-jose" }
+springSecurityOauth2ResourceServer = { module = "org.springframework.security:spring-security-oauth2-resource-server" }
+thymeleaf = { module = "org.thymeleaf:thymeleaf" }
+thymeleafSpring6 = { module = "org.thymeleaf:thymeleaf-spring6" }
+twilio = { module = "com.twilio.sdk:twilio", version.ref = "twilioVersion" }
+zxingCore = { module = "com.google.zxing:core", version.ref = "zxingVersion" }
+zxingJavase = { module = "com.google.zxing:javase", version.ref = "zxingVersion" }
+
+[plugins]
+wsImport = { id = "uk.co.boothen.gradle.wsimport", version.ref = "wsImportVersion" }

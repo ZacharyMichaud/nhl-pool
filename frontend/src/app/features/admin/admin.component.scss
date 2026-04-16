@@ -1,0 +1,146 @@
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 16px;
+}
+
+h2 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 16px;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+
+.team-create {
+  display: flex;
+  gap: 8px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.team-row {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.member-list {
+  color: var(--text-secondary);
+  font-size: 12px;
+  display: block;
+}
+
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.role-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+
+  &.admin {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+  }
+}
+
+.round-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.status-select {
+  width: 160px;
+}
+
+.rule-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.rule-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.rule-input {
+  width: 60px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+}
+
+.rule-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.pred-rule-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.pred-fields {
+  display: flex;
+  gap: 16px;
+}
+
+.pred-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+}
+
+.danger {
+  background: linear-gradient(135deg, var(--danger), #b91c1c) !important;
+}

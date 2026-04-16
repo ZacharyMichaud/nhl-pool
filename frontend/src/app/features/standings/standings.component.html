@@ -1,0 +1,51 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Pool Standings</h1>
+    <p>Live rankings based on your drafted players' playoff performance</p>
+  </div>
+
+  <div *ngFor="let team of standings(); let i = index"
+       class="standing-card"
+       [class.expanded]="expanded === team.teamId"
+       (click)="toggle(team.teamId)">
+    <div class="standing-header">
+      <span class="rank" [ngClass]="'rank-' + (i < 3 ? (i + 1) : 'other')">{{ i + 1 }}</span>
+      <div class="team-main">
+        <span class="team-name">{{ team.teamName }}</span>
+        <span class="team-members">{{ team.memberNames?.join(' & ') }}</span>
+      </div>
+      <div class="points-group">
+        <div class="points-item">
+          <span class="label">Players</span>
+          <span class="val">{{ team.playerPoints }}</span>
+        </div>
+        <div class="points-item">
+          <span class="label">Predictions</span>
+          <span class="val">{{ team.predictionPoints }}</span>
+        </div>
+        <div class="points-item total">
+          <span class="label">Total</span>
+          <span class="val">{{ team.totalPoints }}</span>
+        </div>
+      </div>
+      <span class="expand-icon">{{ expanded === team.teamId ? '▲' : '▼' }}</span>
+    </div>
+
+    <div *ngIf="expanded === team.teamId" class="player-breakdown">
+      <div *ngFor="let ps of team.playerScores" class="pb-row" [class.eliminated]="ps.eliminated">
+        <img [src]="ps.headshotUrl" class="pb-headshot" loading="lazy" onerror="this.style.display='none'">
+        <div class="pb-info">
+          <span class="pb-name">{{ ps.playerName }}</span>
+          <span class="pb-meta">{{ ps.position }} · {{ ps.teamAbbrev }}</span>
+        </div>
+        <span class="stat-badge goals">{{ ps.goals }}G</span>
+        <span class="stat-badge assists">{{ ps.assists }}A</span>
+        <span class="stat-badge points">{{ ps.points }} pts</span>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="standings().length === 0" class="card">
+    <p class="empty">No standings yet — complete the draft first!</p>
+  </div>
+</div>

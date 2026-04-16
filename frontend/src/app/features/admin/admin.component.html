@@ -1,0 +1,134 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Admin Panel</h1>
+    <p>Manage pool settings, sync data, and control the draft</p>
+  </div>
+
+  <div class="admin-grid">
+    <!-- Sync Actions -->
+    <div class="card">
+      <h2>🔄 Data Sync</h2>
+      <div class="action-buttons">
+        <button class="btn-primary" (click)="syncRosters()">Sync Playoff Rosters</button>
+        <button class="btn-primary" (click)="syncAllStats()">Sync All Player Stats</button>
+        <button class="btn-primary" (click)="syncStats()">Sync Drafted Stats</button>
+        <button class="btn-primary" (click)="syncSeries()">Sync Series/Bracket</button>
+      </div>
+    </div>
+
+    <!-- Draft Control -->
+    <div class="card">
+      <h2>📋 Draft Control</h2>
+      <p class="status">Status: <strong>{{ draftConfig()?.status }}</strong></p>
+      <ng-container *ngIf="draftConfig()?.status === 'NOT_STARTED'; else draftActive">
+        <mat-form-field appearance="outline">
+          <mat-label>Players per team</mat-label>
+          <input matInput type="number" [(ngModel)]="playersPerTeam">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Draft order (team IDs, comma-separated)</mat-label>
+          <input matInput [(ngModel)]="draftOrder">
+        </mat-form-field>
+        <div class="action-buttons">
+          <button class="btn-primary" (click)="saveDraftConfig()">Save Config</button>
+          <button class="btn-primary" (click)="startDraft()">Start Draft</button>
+        </div>
+      </ng-container>
+      <ng-template #draftActive>
+        <p>Current pick: <strong>#{{ draftConfig()?.currentPickNumber }}</strong></p>
+        <button class="btn-primary danger" (click)="resetDraft()">Reset Draft</button>
+      </ng-template>
+    </div>
+
+    <!-- Team Management -->
+    <div class="card">
+      <h2>👥 Teams</h2>
+      <div class="team-create">
+        <mat-form-field appearance="outline">
+          <mat-label>New team name</mat-label>
+          <input matInput [(ngModel)]="newTeamName">
+        </mat-form-field>
+        <button class="btn-primary" (click)="createTeam()">Create</button>
+      </div>
+      <div *ngFor="let team of teams()" class="team-row">
+        <strong>{{ team.name }}</strong> (ID: {{ team.id }})
+        <span class="member-list">{{ getMemberNames(team) }}</span>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="card">
+      <h2>👤 Registered Users</h2>
+      <div *ngFor="let u of users()" class="user-row">
+        <span>{{ u.displayName }} ({{ u.username }})</span>
+        <span class="role-badge" [class.admin]="u.role === 'ADMIN'">{{ u.role }}</span>
+        <span>Team: {{ u.team?.name || 'None' }}</span>
+      </div>
+
+      <h3>Assign users to team</h3>
+      <mat-form-field appearance="outline">
+        <mat-label>Team ID</mat-label>
+        <input matInput type="number" [(ngModel)]="assignTeamId">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>User IDs (comma-separated)</mat-label>
+        <input matInput [(ngModel)]="assignUserIds">
+      </mat-form-field>
+      <button class="btn-primary" (click)="assignMembers()">Assign</button>
+    </div>
+
+    <!-- Rounds -->
+    <div class="card">
+      <h2>🏒 Rounds</h2>
+      <div *ngFor="let r of rounds()" class="round-row">
+        <span>{{ r.label }}</span>
+        <mat-form-field appearance="outline" class="status-select">
+          <mat-select [(ngModel)]="r.status" (ngModelChange)="updateRound(r)">
+            <mat-option value="UPCOMING">Upcoming</mat-option>
+            <mat-option value="ACTIVE">Active</mat-option>
+            <mat-option value="COMPLETED">Completed</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <!-- Scoring Rules -->
+    <div class="card">
+      <h2>📊 Player Scoring Rules</h2>
+      <div *ngFor="let rule of scoringRules()" class="rule-row">
+        <span class="rule-name">{{ rule.statName }}</span>
+        <input type="number" class="rule-input" [(ngModel)]="rule.pointValue"
+               (change)="updateScoringRule(rule)">
+        <label class="rule-toggle">
+          <input type="checkbox" [(ngModel)]="rule.enabled" (change)="updateScoringRule(rule)">
+          {{ rule.enabled ? 'On' : 'Off' }}
+        </label>
+      </div>
+    </div>
+
+    <!-- Prediction Round Points -->
+    <div class="card">
+      <h2>🎯 Prediction Round Points</h2>
+      <div *ngFor="let rule of predictionRules()" class="pred-rule-row">
+        <span class="rule-name">{{ getRoundLabel(rule.roundNumber) }}</span>
+        <div class="pred-fields">
+          <div class="pred-field" *ngIf="rule.roundNumber > 0">
+            <label>Winner pts</label>
+            <input type="number" class="rule-input" [(ngModel)]="rule.correctWinnerPoints"
+                   (change)="updatePredictionRule(rule)">
+          </div>
+          <div class="pred-field" *ngIf="rule.roundNumber > 0">
+            <label>Games bonus</label>
+            <input type="number" class="rule-input" [(ngModel)]="rule.correctGamesBonus"
+                   (change)="updatePredictionRule(rule)">
+          </div>
+          <div class="pred-field" *ngIf="rule.roundNumber === 0">
+            <label>Conn Smythe bonus</label>
+            <input type="number" class="rule-input" [(ngModel)]="rule.connSmytheBonus"
+                   (change)="updatePredictionRule(rule)">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

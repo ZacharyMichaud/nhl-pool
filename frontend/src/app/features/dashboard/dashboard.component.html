@@ -1,0 +1,52 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Dashboard</h1>
+    <p>Welcome back, {{ auth.user()?.displayName }}! Here's your pool overview.</p>
+  </div>
+
+  <div class="dashboard-grid">
+    <!-- Standings Preview -->
+    <div class="card standings-card">
+      <h2>🏆 Pool Standings</h2>
+      <ng-container *ngFor="let team of standings(); let i = index">
+        <div class="standing-row">
+          <span class="rank" [ngClass]="'rank-' + (i < 3 ? (i + 1) : 'other')">{{ i + 1 }}</span>
+          <div class="team-info">
+            <span class="team-name">{{ team.teamName }}</span>
+            <span class="team-members">{{ team.memberNames?.join(' & ') }}</span>
+          </div>
+          <div class="team-stats">
+            <span class="stat-badge points">{{ team.totalPoints }} pts</span>
+            <span class="active-count">{{ team.activePlayers }} active</span>
+          </div>
+        </div>
+      </ng-container>
+      <p *ngIf="standings().length === 0" class="empty">No standings yet. Complete the draft to get started!</p>
+      <a routerLink="/standings" class="view-all">View Full Standings →</a>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="quick-links">
+      <a routerLink="/draft" class="quick-card">
+        <span class="qc-icon">📋</span>
+        <span class="qc-title">Draft Board</span>
+        <span class="qc-sub">Manage your player draft</span>
+      </a>
+      <a routerLink="/my-team" class="quick-card">
+        <span class="qc-icon">👥</span>
+        <span class="qc-title">My Team</span>
+        <span class="qc-sub">View your drafted roster</span>
+      </a>
+      <a routerLink="/predictions" class="quick-card">
+        <span class="qc-icon">🎯</span>
+        <span class="qc-title">Predictions</span>
+        <span class="qc-sub">Enter series predictions</span>
+      </a>
+      <a *ngIf="auth.isAdmin()" routerLink="/admin" class="quick-card admin-card">
+        <span class="qc-icon">⚙️</span>
+        <span class="qc-title">Admin</span>
+        <span class="qc-sub">Manage pool settings</span>
+      </a>
+    </div>
+  </div>
+</div>

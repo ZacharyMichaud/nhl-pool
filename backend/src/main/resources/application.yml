@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/nhlpool}
+    username: ${DB_USER:nhlpool}
+    password: ${DB_PASSWORD:nhlpool}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+
+server:
+  port: ${PORT:8080}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:nhl-pool-dev-secret-key-change-in-production-please}
+    expiration-ms: 86400000
+  admin:
+    secret: ${ADMIN_SECRET:nhl-pool-admin-2026}
+  cors:
+    origins: ${CORS_ORIGINS:http://localhost:4200,http://localhost:4201}
+  nhl:
+    base-url: https://api-web.nhle.com/v1
+    season: 20252026
+
+logging:
+  level:
+    com.nhlpool: DEBUG
+    org.springframework.security: WARN

@@ -1,0 +1,18 @@
+.env
+
+# Backend
+backend/.gradle/
+backend/build/
+backend/bin/
+backend/.idea/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store

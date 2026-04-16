@@ -1,0 +1,113 @@
+.team-summary {
+  margin-bottom: 24px;
+}
+
+.summary-row {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+}
+
+.summary-item {
+  text-align: center;
+}
+
+.s-val {
+  display: block;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.s-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.player-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: rgba(0, 195, 255, 0.15);
+  }
+}
+
+.pc-headshot {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-secondary);
+}
+
+.pc-body {
+  flex: 1;
+}
+
+.pc-name {
+  font-weight: 700;
+  font-size: 14px;
+  display: block;
+}
+
+.pc-meta {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.pc-elim {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.pc-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.pc-stat {
+  text-align: center;
+
+  .val {
+    display: block;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .lbl {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+}
+
+.pc-stat.highlight .val {
+  color: var(--accent);
+}
+
+.empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px;
+}

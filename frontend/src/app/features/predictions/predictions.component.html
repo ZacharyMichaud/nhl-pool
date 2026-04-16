@@ -1,0 +1,59 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Predictions</h1>
+    <p>Predict series winners and earn bonus points</p>
+  </div>
+
+  <div class="round-tabs">
+    <button *ngFor="let r of roundOptions"
+            [class.active]="selectedRound === r.value"
+            (click)="selectRound(r.value)">
+      {{ r.label }}
+    </button>
+  </div>
+
+  <div class="series-grid">
+    <div *ngFor="let s of series()" class="series-card card">
+      <div class="matchup">
+        <div class="team-side" [class.winner]="s.winnerAbbrev === s.topSeedAbbrev">
+          <img [src]="s.topSeedLogoUrl" class="team-logo" onerror="this.style.display='none'">
+          <span class="team-abbrev">{{ s.topSeedAbbrev }}</span>
+          <span class="team-wins">{{ s.topSeedWins }}</span>
+        </div>
+        <span class="vs">vs</span>
+        <div class="team-side" [class.winner]="s.winnerAbbrev === s.bottomSeedAbbrev">
+          <img [src]="s.bottomSeedLogoUrl" class="team-logo" onerror="this.style.display='none'">
+          <span class="team-abbrev">{{ s.bottomSeedAbbrev }}</span>
+          <span class="team-wins">{{ s.bottomSeedWins }}</span>
+        </div>
+      </div>
+
+      <div class="prediction-form">
+        <mat-form-field appearance="outline" class="pred-field">
+          <mat-label>Winner</mat-label>
+          <mat-select [(ngModel)]="predictions()[s.id]!.winner" [disabled]="!!s.winnerAbbrev">
+            <mat-option [value]="s.topSeedAbbrev">{{ s.topSeedAbbrev }}</mat-option>
+            <mat-option [value]="s.bottomSeedAbbrev">{{ s.bottomSeedAbbrev }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="pred-field">
+          <mat-label>Games</mat-label>
+          <mat-select [(ngModel)]="predictions()[s.id]!.games" [disabled]="!!s.winnerAbbrev">
+            <mat-option [value]="4">4</mat-option>
+            <mat-option [value]="5">5</mat-option>
+            <mat-option [value]="6">6</mat-option>
+            <mat-option [value]="7">7</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <button class="btn-primary" (click)="submitPrediction(s)"
+                [disabled]="!predictions()[s.id].winner || s.winnerAbbrev">
+          {{ s.winnerAbbrev ? 'Locked' : 'Save' }}
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="series().length === 0" class="card">
+      <p class="empty">No series data for this round yet. Ask the admin to sync series.</p>
+    </div>
+  </div>
+</div>

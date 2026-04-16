@@ -1,0 +1,56 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>My Team</h1>
+    <p>Your drafted roster and live playoff stats</p>
+  </div>
+
+  <ng-container *ngIf="myTeam(); else noTeam">
+    <div class="team-summary card">
+      <div class="summary-row">
+        <div class="summary-item">
+          <span class="s-val">{{ myTeam()?.totalPoints }}</span>
+          <span class="s-label">Total Points</span>
+        </div>
+        <div class="summary-item">
+          <span class="s-val">{{ myTeam()?.playerPoints }}</span>
+          <span class="s-label">Player Pts</span>
+        </div>
+        <div class="summary-item">
+          <span class="s-val">{{ myTeam()?.predictionPoints }}</span>
+          <span class="s-label">Prediction Pts</span>
+        </div>
+        <div class="summary-item">
+          <span class="s-val">{{ myTeam()?.activePlayers }}</span>
+          <span class="s-label">Active</span>
+        </div>
+        <div class="summary-item">
+          <span class="s-val">{{ myTeam()?.eliminatedPlayers }}</span>
+          <span class="s-label">Eliminated</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="roster-grid">
+      <div *ngFor="let ps of myTeam()?.playerScores || []" class="player-card" [class.eliminated]="ps.eliminated">
+        <img [src]="ps.headshotUrl" class="pc-headshot" loading="lazy" onerror="this.style.display='none'">
+        <div class="pc-body">
+          <span class="pc-name">{{ ps.playerName }}</span>
+          <span class="pc-meta">{{ ps.position }} · {{ ps.teamAbbrev }}</span>
+          <span *ngIf="ps.eliminated" class="pc-elim">ELIMINATED</span>
+        </div>
+        <div class="pc-stats">
+          <div class="pc-stat"><span class="val">{{ ps.goals }}</span><span class="lbl">G</span></div>
+          <div class="pc-stat"><span class="val">{{ ps.assists }}</span><span class="lbl">A</span></div>
+          <div class="pc-stat"><span class="val">{{ ps.gamesPlayed }}</span><span class="lbl">GP</span></div>
+          <div class="pc-stat highlight"><span class="val">{{ ps.points }}</span><span class="lbl">PTS</span></div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-template #noTeam>
+    <div class="card">
+      <p class="empty">You're not assigned to a team yet. Ask the admin to set you up!</p>
+    </div>
+  </ng-template>
+</div>

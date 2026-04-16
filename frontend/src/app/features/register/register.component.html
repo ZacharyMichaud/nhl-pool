@@ -1,0 +1,33 @@
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <span class="logo">🏒</span>
+      <h1>Join the Pool</h1>
+      <p>Create your account to start drafting</p>
+    </div>
+    <div *ngIf="error" class="error-msg">{{ error }}</div>
+    <form (ngSubmit)="register()">
+      <mat-form-field appearance="outline">
+        <mat-label>Username</mat-label>
+        <input matInput [(ngModel)]="username" name="username" required>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Display Name</mat-label>
+        <input matInput [(ngModel)]="displayName" name="displayName" required>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Password</mat-label>
+        <input matInput [(ngModel)]="password" name="password" type="password" required>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Admin Secret (optional)</mat-label>
+        <input matInput [(ngModel)]="adminSecret" name="adminSecret">
+        <mat-hint>Only if you're the pool admin</mat-hint>
+      </mat-form-field>
+      <button mat-flat-button color="primary" type="submit" class="submit-btn" [disabled]="loading">
+        {{ loading ? 'Creating...' : 'Create Account' }}
+      </button>
+    </form>
+    <p class="auth-footer">Already have an account? <a routerLink="/login">Sign in</a></p>
+  </div>
+</div>

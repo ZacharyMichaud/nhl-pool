@@ -1,0 +1,116 @@
+.standing-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: rgba(0, 195, 255, 0.1);
+  }
+
+  &.expanded {
+    border-color: rgba(0, 195, 255, 0.2);
+  }
+}
+
+.standing-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+.team-main {
+  flex: 1;
+}
+
+.team-name {
+  font-weight: 700;
+  font-size: 16px;
+  display: block;
+}
+
+.team-members {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.points-group {
+  display: flex;
+  gap: 20px;
+}
+
+.points-item {
+  text-align: center;
+
+  .label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+
+  .val {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  &.total .val {
+    color: var(--accent);
+    font-size: 22px;
+  }
+}
+
+.expand-icon {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.player-breakdown {
+  padding: 0 20px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.pb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.pb-headshot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-secondary);
+}
+
+.pb-info {
+  flex: 1;
+}
+
+.pb-name {
+  font-weight: 600;
+  font-size: 13px;
+  display: block;
+}
+
+.pb-meta {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px;
+}
