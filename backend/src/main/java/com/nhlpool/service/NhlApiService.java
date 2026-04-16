@@ -95,7 +95,11 @@ public class NhlApiService {
      * Sync all roster players for a set of teams into the database
      */
     public void syncPlayoffRosters(Set<String> teamAbbrevs) {
+        log.info("Starting roster sync for {} teams: {}", teamAbbrevs.size(), teamAbbrevs);
+        int[] teamCount = {0};
         teamAbbrevs.forEach(abbrev -> {
+            teamCount[0]++;
+            log.info("[{}/{}] Fetching roster for {}", teamCount[0], teamAbbrevs.size(), abbrev);
             try {
                 JsonNode roster = nhlApiClient.get()
                         .uri("/roster/{abbrev}/{season}", abbrev, season)
@@ -107,16 +111,24 @@ public class NhlApiService {
                     processRosterGroup(roster, "forwards", abbrev);
                     processRosterGroup(roster, "defensemen", abbrev);
                     processRosterGroup(roster, "goalies", abbrev);
+                    log.info("|__ {} roster synced (F:{} D:{} G:{})",
+                            abbrev,
+                            roster.path("forwards").size(),
+                            roster.path("defensemen").size(),
+                            roster.path("goalies").size());
+                } else {
+                    log.warn("|__ {} returned null roster", abbrev);
                 }
-                log.info("Synced roster for {}", abbrev);
             } catch (Exception e) {
                 log.error("Failed to sync roster for {}", abbrev, e);
             }
         });
+        log.info("Roster sync complete. Total players in DB: {}", playerRepository.count());
     }
 
     private void processRosterGroup(JsonNode roster, String group, String teamAbbrev) {
         if (!roster.has(group)) return;
+        int[] added = {0}, skipped = {0};
         roster.get(group).forEach(playerNode -> {
             long nhlId = playerNode.get("id").asLong();
             if (!playerRepository.existsByNhlPlayerId(nhlId)) {
@@ -129,8 +141,15 @@ public class NhlApiService {
                         .headshotUrl(playerNode.path("headshot").asText(""))
                         .build();
                 playerRepository.save(player);
+                log.debug("  Added player: {} {} ({})",
+                        playerNode.path("firstName").path("default").asText(),
+                        playerNode.path("lastName").path("default").asText(), group);
+                added[0]++;
+            } else {
+                skipped[0]++;
             }
         });
+        log.info("  {} {}: +{} added, {} already existed", teamAbbrev, group, added[0], skipped[0]);
     }
 
     /**
@@ -174,6 +193,7 @@ public class NhlApiService {
      * Sync ALL stats (regular season + playoff + game log splits) — slow, manual only
      */
     public void syncAllStats(Player player) {
+        log.info("Syncing all stats for {} ({})", player.getFullName(), player.getTeamAbbrev());
         try {
             JsonNode landing = nhlApiClient.get()
                     .uri("/player/{playerId}/landing", player.getNhlPlayerId())
@@ -181,11 +201,15 @@ public class NhlApiService {
                     .bodyToMono(JsonNode.class)
                     .block();
 
-            if (landing == null) return;
+            if (landing == null) {
+                log.warn("  No landing data returned for {}", player.getFullName());
+                return;
+            }
 
+            boolean foundRegular = false, foundPlayoff = false;
             JsonNode seasonTotals = landing.path("seasonTotals");
             if (seasonTotals.isArray()) {
-                seasonTotals.forEach(seasonEntry -> {
+                for (JsonNode seasonEntry : seasonTotals) {
                     String league = seasonEntry.path("leagueAbbrev").asText("");
                     int gameType = seasonEntry.path("gameTypeId").asInt(0);
                     String seasonStr = String.valueOf(seasonEntry.path("season").asInt(0));
@@ -199,6 +223,7 @@ public class NhlApiService {
                             player.setRegularSeasonPowerPlayGoals(seasonEntry.path("powerPlayGoals").asInt(0));
                             player.setRegularSeasonPowerPlayPoints(seasonEntry.path("powerPlayPoints").asInt(0));
                             player.setRegularSeasonAvgToi(seasonEntry.path("avgToi").asText(null));
+                            foundRegular = true;
                         } else if (gameType == 3) {
                             player.setPlayoffGoals(seasonEntry.path("goals").asInt(0));
                             player.setPlayoffAssists(seasonEntry.path("assists").asInt(0));
@@ -207,10 +232,19 @@ public class NhlApiService {
                             player.setPlayoffPowerPlayGoals(seasonEntry.path("powerPlayGoals").asInt(0));
                             player.setPlayoffPowerPlayPoints(seasonEntry.path("powerPlayPoints").asInt(0));
                             player.setPlayoffAvgToi(seasonEntry.path("avgToi").asText(null));
+                            foundPlayoff = true;
                         }
                     }
-                });
+                }
             }
+            log.info("  {} — RS:{} GP={} PTS={} | PO:{} GP={} PTS={}",
+                    player.getFullName(),
+                    foundRegular ? "found" : "missing",
+                    player.getRegularSeasonGamesPlayed(),
+                    player.getRegularSeasonPoints(),
+                    foundPlayoff ? "found" : "none yet",
+                    player.getPlayoffGamesPlayed(),
+                    player.getPlayoffPoints());
 
             playerRepository.save(player);
 
@@ -225,6 +259,7 @@ public class NhlApiService {
      * Fetch game-by-game log and compute last-41 / last-20 stat splits
      */
     private void syncGameLogSplits(Player player) {
+        log.info("  Fetching game log for {} ...", player.getFullName());
         try {
             JsonNode gameLog = nhlApiClient.get()
                     .uri("/player/{playerId}/game-log/{season}/2", player.getNhlPlayerId(), season)
@@ -232,17 +267,28 @@ public class NhlApiService {
                     .bodyToMono(JsonNode.class)
                     .block();
 
-            if (gameLog == null || !gameLog.has("gameLog")) return;
+            if (gameLog == null || !gameLog.has("gameLog")) {
+                log.warn("  No game log data for {}", player.getFullName());
+                return;
+            }
 
             JsonNode games = gameLog.get("gameLog");
-            if (!games.isArray() || games.isEmpty()) return;
+            if (!games.isArray() || games.isEmpty()) {
+                log.warn("  Empty game log for {}", player.getFullName());
+                return;
+            }
 
-            // Games come most-recent first from the API
             List<JsonNode> gameList = new ArrayList<>();
             games.forEach(gameList::add);
+            log.info("  {} — {} games in log, computing L41/L20 splits", player.getFullName(), gameList.size());
 
             computeSplit(player, gameList, 41);
             computeSplit(player, gameList, 20);
+
+            log.info("  {} splits done — L41: {}pts in {}gp | L20: {}pts in {}gp",
+                    player.getFullName(),
+                    player.getLast41Points(), player.getLast41GamesPlayed(),
+                    player.getLast20Points(), player.getLast20GamesPlayed());
 
             playerRepository.save(player);
         } catch (Exception e) {

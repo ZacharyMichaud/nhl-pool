@@ -58,8 +58,13 @@ public class PlayerSyncService {
      */
     public void syncAllPlayerStats() {
         List<Player> players = playerRepository.findAll();
-        log.info("Syncing ALL stats (incl. game logs) for {} players — this will take a while", players.size());
-        players.forEach(nhlApiService::syncAllStats);
+        int total = players.size();
+        log.info("Syncing ALL stats (incl. game logs) for {} players — this will take a while", total);
+        for (int i = 0; i < players.size(); i++) {
+            log.info("[{}/{}] Processing player stats...", i + 1, total);
+            nhlApiService.syncAllStats(players.get(i));
+        }
+        log.info("All player stats sync complete ({} players)", total);
     }
 
     /**
