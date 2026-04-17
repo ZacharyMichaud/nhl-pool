@@ -1,5 +1,6 @@
 package com.nhlpool.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,6 +27,7 @@ public class PoolTeam {
     @Builder.Default
     private List<User> members = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY)
     @Builder.Default
     private List<DraftPick> draftPicks = new ArrayList<>();

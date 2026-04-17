@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { catchError, EMPTY } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
@@ -56,7 +57,7 @@ export class AdminComponent implements OnInit {
   }
 
   loadAll() {
-    this.api.getDraftConfig().subscribe((c) => {
+    this.api.getDraftConfig().pipe(catchError(e => { this.show('Config load failed: ' + (e.status || e.message)); return EMPTY; })).subscribe((c) => {
       this.draftConfig.set(c);
       this.playersPerTeam = c.playersPerTeam;
       const order: string = c.draftOrder || '';
@@ -64,14 +65,15 @@ export class AdminComponent implements OnInit {
         ? order.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id))
         : [];
     });
-    this.api.getTeams().subscribe((t) => this.teams.set(t));
-    this.api.getUsers().subscribe((u) => this.users.set(u));
-    this.api.getRounds().subscribe((r) => this.rounds.set(r));
-    this.api.getScoringRules().subscribe((r: any) => {
+    this.api.getTeams().pipe(catchError(e => { this.show('Teams load failed: ' + (e.status || e.message)); return EMPTY; })).subscribe((t) => this.teams.set(t));
+    this.api.getUsers().pipe(catchError(e => { this.show('Users load failed: ' + (e.status || e.message)); return EMPTY; })).subscribe((u) => this.users.set(u));
+    this.api.getRounds().pipe(catchError(e => { this.show('Rounds load failed: ' + (e.status || e.message)); return EMPTY; })).subscribe((r) => this.rounds.set(r));
+    this.api.getScoringRules().pipe(catchError(e => { this.show('Rules load failed: ' + (e.status || e.message)); return EMPTY; })).subscribe((r: any) => {
       this.scoringRules.set(r.playerRules || []);
       this.predictionRules.set(r.predictionRules || []);
     });
   }
+
 
   show(msg: string) {
     this.snackBar.open(msg, 'OK', { duration: 3000 });
