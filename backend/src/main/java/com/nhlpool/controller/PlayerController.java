@@ -25,6 +25,10 @@ public class PlayerController {
         } else {
             players = playerRepository.findByDraftedFalseAndEliminatedFalse();
         }
+        // Always exclude goalies
+        players = players.stream()
+                .filter(p -> !"G".equals(p.getPosition()))
+                .toList();
         if (position != null && !position.isBlank()) {
             players = players.stream()
                     .filter(p -> p.getPosition().equals(position))

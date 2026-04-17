@@ -1,17 +1,18 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ApiService } from '../../core/api.service';
+import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
+import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSnackBarModule, DropdownComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss',
 })
@@ -27,10 +28,28 @@ export class AdminComponent implements OnInit {
   predictionRules = signal<any[]>([]);
 
   playersPerTeam = 10;
-  draftOrder = '';
+  draftOrderTeamIds: number[] = [];
   newTeamName = '';
-  assignTeamId = 0;
-  assignUserIds = '';
+  assignTeamId: number | null = null;
+  assignUserIds: number[] = [];
+
+  // ── Dropdown option lists ────────────────────────────────────────────────────
+
+  teamDropdownOptions = computed<DropdownOption[]>(() =>
+    this.teams().map(t => ({ value: t.id, label: t.name }))
+  );
+
+  userDropdownOptions = computed<DropdownOption[]>(() =>
+    this.users().map(u => ({ value: u.id, label: `${u.displayName} (${u.username})` }))
+  );
+
+  readonly roundStatusOptions: DropdownOption[] = [
+    { value: 'UPCOMING',  label: 'Upcoming' },
+    { value: 'ACTIVE',    label: 'Active' },
+    { value: 'COMPLETED', label: 'Completed' },
+  ];
+
+  // ─────────────────────────────────────────────────────────────────────────────
 
   ngOnInit() {
     this.loadAll();
@@ -40,7 +59,10 @@ export class AdminComponent implements OnInit {
     this.api.getDraftConfig().subscribe((c) => {
       this.draftConfig.set(c);
       this.playersPerTeam = c.playersPerTeam;
-      this.draftOrder = c.draftOrder || '';
+      const order: string = c.draftOrder || '';
+      this.draftOrderTeamIds = order
+        ? order.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id))
+        : [];
     });
     this.api.getTeams().subscribe((t) => this.teams.set(t));
     this.api.getUsers().subscribe((u) => this.users.set(u));
@@ -84,7 +106,8 @@ export class AdminComponent implements OnInit {
   }
 
   saveDraftConfig() {
-    this.api.updateDraftConfig({ playersPerTeam: this.playersPerTeam, draftOrder: this.draftOrder }).subscribe({
+    const draftOrder = this.draftOrderTeamIds.join(',');
+    this.api.updateDraftConfig({ playersPerTeam: this.playersPerTeam, draftOrder }).subscribe({
       next: () => this.show('Config saved'),
       error: (e) => this.show(e.error?.error || 'Failed'),
     });
@@ -113,9 +136,9 @@ export class AdminComponent implements OnInit {
   }
 
   assignMembers() {
-    const ids = this.assignUserIds.split(',').map((id) => parseInt(id.trim())).filter((id) => !isNaN(id));
-    this.api.assignMembers(this.assignTeamId, ids).subscribe({
-      next: () => { this.show('Members assigned!'); this.loadAll(); },
+    if (this.assignTeamId == null || this.assignUserIds.length === 0) return;
+    this.api.assignMembers(this.assignTeamId, this.assignUserIds).subscribe({
+      next: () => { this.show('Members assigned!'); this.assignTeamId = null; this.assignUserIds = []; this.loadAll(); },
       error: (e) => this.show(e.error?.error || 'Failed'),
     });
   }
@@ -125,6 +148,11 @@ export class AdminComponent implements OnInit {
       next: () => this.show('Round updated'),
       error: (e) => this.show(e.error?.error || 'Failed'),
     });
+  }
+
+  onRoundStatusChange(r: any, val: string) {
+    r.status = val;
+    this.updateRound(r);
   }
 
   updateScoringRule(rule: any) {

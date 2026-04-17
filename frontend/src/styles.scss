@@ -54,6 +54,14 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+
+  // Applied by DraftComponent.ngOnInit — locks outer scroll only on the draft page
+  &.draft-open {
+    @media (max-width: 899px) {
+      height: 100dvh;
+      overflow: hidden;
+    }
+  }
 }
 
 a {
@@ -72,8 +80,12 @@ a {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 24px;
+  padding: 16px;
   transition: all 0.2s ease;
+
+  @media (min-width: 768px) {
+    padding: 24px;
+  }
 
   &:hover {
     background: var(--bg-card-hover);
@@ -85,26 +97,43 @@ a {
 .page-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 16px;
+
+  @media (min-width: 768px) {
+    padding: 24px;
+  }
 }
 
 .page-header {
-  margin-bottom: 32px;
+  margin-bottom: 20px;
+
+  @media (min-width: 768px) {
+    margin-bottom: 32px;
+  }
 
   h1 {
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 800;
     letter-spacing: -0.5px;
-    margin: 0 0 8px;
+    margin: 0 0 4px;
     background: linear-gradient(135deg, #ffffff 0%, var(--accent) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+
+    @media (min-width: 768px) {
+      font-size: 28px;
+      margin: 0 0 8px;
+    }
   }
 
   p {
     color: var(--text-secondary);
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
+
+    @media (min-width: 768px) {
+      font-size: 14px;
+    }
   }
 }
 

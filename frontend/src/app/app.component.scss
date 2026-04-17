@@ -1,22 +1,32 @@
+$mobile: 768px;
+
+// ── Navbar ────────────────────────────────────────────────────────────────────
 .navbar {
-  background: rgba(15, 31, 56, 0.95);
+  background: rgba(15, 31, 56, 0.97);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 200;
 }
 
 .nav-content {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 24px;
-  height: 60px;
+  padding: 0 16px;
+  height: 56px;
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 24px;
+
+  @media (min-width: $mobile) {
+    padding: 0 24px;
+    height: 60px;
+    gap: 32px;
+  }
 }
 
+// ── Brand ─────────────────────────────────────────────────────────────────────
 .brand {
   display: flex;
   align-items: center;
@@ -24,17 +34,23 @@
   text-decoration: none;
   color: white;
   font-weight: 800;
-  font-size: 18px;
+  font-size: 17px;
+  flex-shrink: 0;
+
+  @media (min-width: $mobile) { font-size: 18px; }
 }
 
-.brand-icon {
-  font-size: 24px;
-}
+.brand-icon { font-size: 22px; }
 
+// ── Desktop nav links ─────────────────────────────────────────────────────────
 .nav-links {
-  display: flex;
+  display: none;
   gap: 4px;
   flex: 1;
+
+  @media (min-width: $mobile) {
+    display: flex;
+  }
 
   a {
     padding: 8px 14px;
@@ -44,38 +60,25 @@
     font-size: 14px;
     transition: all 0.2s;
     text-decoration: none;
+    white-space: nowrap;
 
-    &:hover {
-      color: var(--text-primary);
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    &.active {
-      color: var(--accent);
-      background: var(--accent-glow);
-    }
+    &:hover  { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+    &.active { color: var(--accent); background: var(--accent-glow); }
   }
 
-  .admin-link {
-    color: var(--warning);
-
-    &.active {
-      background: rgba(245, 158, 11, 0.15);
-    }
-  }
+  .admin-link { color: var(--warning); &.active { background: rgba(245,158,11,0.15); } }
 }
 
-.nav-user {
-  display: flex;
+// ── Desktop user ──────────────────────────────────────────────────────────────
+.desktop-user {
+  display: none;
   align-items: center;
   gap: 12px;
+
+  @media (min-width: $mobile) { display: flex; }
 }
 
-.user-name {
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-}
+.user-name { color: var(--text-secondary); font-size: 13px; font-weight: 500; }
 
 .btn-logout {
   background: transparent;
@@ -87,9 +90,158 @@
   cursor: pointer;
   font-family: 'Inter', sans-serif;
   transition: all 0.2s;
+  white-space: nowrap;
 
-  &:hover {
-    border-color: var(--danger);
-    color: var(--danger);
+  &:hover { border-color: var(--danger); color: var(--danger); }
+}
+
+// ── Hamburger ─────────────────────────────────────────────────────────────────
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  margin-left: auto;
+  border-radius: 8px;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+
+  @media (min-width: $mobile) { display: none; }
+
+  span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--text-primary);
+    border-radius: 2px;
+    transition: all 0.25s ease;
+    transform-origin: center;
   }
+
+  &.open {
+    span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  }
+
+  &:active { background: rgba(255,255,255,0.06); }
+}
+
+// ── Mobile Drawer ─────────────────────────────────────────────────────────────
+.mobile-drawer {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border);
+  z-index: 300;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  &.open { transform: translateX(0); }
+
+  @media (min-width: $mobile) { display: none; }
+}
+
+.drawer-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 16px;
+  overflow-y: auto;
+}
+
+.drawer-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.drawer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #0088cc);
+  color: white;
+  font-weight: 800;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.drawer-name { font-weight: 700; font-size: 14px; }
+.drawer-role { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+.drawer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 14px;
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+
+    &:active { background: rgba(255,255,255,0.04); }
+    &.active { color: var(--accent); background: var(--accent-glow); font-weight: 600; }
+  }
+
+  .admin-link { color: var(--warning); &.active { background: rgba(245,158,11,0.15); } }
+}
+
+.drawer-logout {
+  margin-top: 16px;
+  padding: 13px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.15s;
+  width: 100%;
+
+  &:active { background: rgba(239, 68, 68, 0.15); }
+}
+
+// ── Backdrop ──────────────────────────────────────────────────────────────────
+.drawer-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 299;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s;
+  backdrop-filter: blur(2px);
+
+  @media (max-width: #{$mobile - 1px}) { display: block; }
+  &.visible { opacity: 1; pointer-events: all; }
 }

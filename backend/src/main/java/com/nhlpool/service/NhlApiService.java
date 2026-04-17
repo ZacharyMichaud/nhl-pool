@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.*;
+import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -110,12 +112,10 @@ public class NhlApiService {
                 if (roster != null) {
                     processRosterGroup(roster, "forwards", abbrev);
                     processRosterGroup(roster, "defensemen", abbrev);
-                    processRosterGroup(roster, "goalies", abbrev);
-                    log.info("|__ {} roster synced (F:{} D:{} G:{})",
+                    log.info("|__ {} roster synced (F:{} D:{})",
                             abbrev,
                             roster.path("forwards").size(),
-                            roster.path("defensemen").size(),
-                            roster.path("goalies").size());
+                            roster.path("defensemen").size());
                 } else {
                     log.warn("|__ {} returned null roster", abbrev);
                 }
@@ -256,11 +256,58 @@ public class NhlApiService {
     }
 
     /**
+     * Returns the game IDs of the team's last {@code count} COMPLETED regular-season games.
+     * The schedule endpoint returns all games for the season; we sort by date and take the tail.
+     */
+    private Set<Long> getTeamLastNGameIds(String teamAbbrev, int count) {
+        try {
+            JsonNode schedule = nhlApiClient.get()
+                    .uri("/club-schedule-season/{abbrev}/{season}", teamAbbrev, season)
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+
+            if (schedule == null || !schedule.has("games")) {
+                log.warn("  No schedule data for {}", teamAbbrev);
+                return Set.of();
+            }
+
+            List<JsonNode> completed = new ArrayList<>();
+            schedule.get("games").forEach(game -> {
+                // gameState "OFF" = completed; also accept "FINAL"
+                String state = game.path("gameState").asText("");
+                int type = game.path("gameType").asInt(0);
+                // gameType 2 = regular season
+                if (type == 2 && ("OFF".equals(state) || "FINAL".equals(state) || "7".equals(state))) {
+                    completed.add(game);
+                }
+            });
+
+            // Sort ascending by gameDate, then take the last `count`
+            completed.sort(Comparator.comparing(g -> g.path("gameDate").asText("")));
+
+            int from = Math.max(0, completed.size() - count);
+            Set<Long> ids = new HashSet<>();
+            for (int i = from; i < completed.size(); i++) {
+                ids.add(completed.get(i).path("id").asLong());
+            }
+            log.info("  {} — {} completed RS games found, using last {} (ids: {} …)",
+                    teamAbbrev, completed.size(), count, ids.stream().limit(3).toList());
+            return ids;
+        } catch (Exception e) {
+            log.warn("  Failed to fetch schedule for {}: {}", teamAbbrev, e.getMessage());
+            return Set.of();
+        }
+    }
+
+    /**
      * Fetch game-by-game log and compute last-41 / last-20 stat splits
+     * based on the TEAM's last N games of the regular season.
      */
     private void syncGameLogSplits(Player player) {
-        log.info("  Fetching game log for {} ...", player.getFullName());
+        log.info("  Fetching game log + team schedule for {} ({}) ...", player.getFullName(), player.getTeamAbbrev());
         try {
+            // 1. Player's own game log
             JsonNode gameLog = nhlApiClient.get()
                     .uri("/player/{playerId}/game-log/{season}/2", player.getNhlPlayerId(), season)
                     .retrieve()
@@ -278,17 +325,29 @@ public class NhlApiService {
                 return;
             }
 
-            List<JsonNode> gameList = new ArrayList<>();
-            games.forEach(gameList::add);
-            log.info("  {} — {} games in log, computing L41/L20 splits", player.getFullName(), gameList.size());
+            List<JsonNode> allPlayerGames = new ArrayList<>();
+            games.forEach(allPlayerGames::add);
+            log.info("  {} — {} games in player log", player.getFullName(), allPlayerGames.size());
 
-            computeSplit(player, gameList, 41);
-            computeSplit(player, gameList, 20);
+            // 2. Team window game IDs (one schedule call covers both splits)
+            Set<Long> last41Ids = getTeamLastNGameIds(player.getTeamAbbrev(), 41);
+            Set<Long> last20Ids = getTeamLastNGameIds(player.getTeamAbbrev(), 20);
 
-            log.info("  {} splits done — L41: {}pts in {}gp | L20: {}pts in {}gp",
+            // 3. Filter player log to only games within each team window
+            List<JsonNode> games41 = allPlayerGames.stream()
+                    .filter(g -> last41Ids.contains(g.path("gameId").asLong()))
+                    .collect(Collectors.toList());
+            List<JsonNode> games20 = allPlayerGames.stream()
+                    .filter(g -> last20Ids.contains(g.path("gameId").asLong()))
+                    .collect(Collectors.toList());
+
+            computeSplit41(player, games41);
+            computeSplit20(player, games20);
+
+            log.info("  {} splits done — L41: {}pts in {}/{} gp | L20: {}pts in {}/{} gp",
                     player.getFullName(),
-                    player.getLast41Points(), player.getLast41GamesPlayed(),
-                    player.getLast20Points(), player.getLast20GamesPlayed());
+                    player.getLast41Points(), player.getLast41GamesPlayed(), last41Ids.size(),
+                    player.getLast20Points(), player.getLast20GamesPlayed(), last20Ids.size());
 
             playerRepository.save(player);
         } catch (Exception e) {
@@ -296,34 +355,78 @@ public class NhlApiService {
         }
     }
 
-    private void computeSplit(Player player, List<JsonNode> games, int count) {
-        int limit = Math.min(count, games.size());
-        int gp = limit;
-        int goals = 0, assists = 0, points = 0, ppg = 0, ppp = 0;
+    private void computeSplit41(Player player, List<JsonNode> playerGamesInWindow) {
+        int gp = 0, goals = 0, assists = 0, points = 0, ppg = 0, ppp = 0;
+        long totalToiSeconds = 0;
+        int toiCount = 0;
 
-        for (int i = 0; i < limit; i++) {
-            JsonNode g = games.get(i);
-            goals += g.path("goals").asInt(0);
+        for (JsonNode g : playerGamesInWindow) {
+            gp++;
+            goals   += g.path("goals").asInt(0);
             assists += g.path("assists").asInt(0);
-            points += g.path("points").asInt(0);
-            ppg += g.path("powerPlayGoals").asInt(0);
-            ppp += g.path("powerPlayPoints").asInt(0);
+            points  += g.path("points").asInt(0);
+            ppg     += g.path("powerPlayGoals").asInt(0);
+            ppp     += g.path("powerPlayPoints").asInt(0);
+            String toi = g.path("toi").asText("");
+            if (!toi.isEmpty()) {
+                totalToiSeconds += toiToSeconds(toi);
+                toiCount++;
+            }
         }
 
-        if (count == 41) {
-            player.setLast41GamesPlayed(gp);
-            player.setLast41Goals(goals);
-            player.setLast41Assists(assists);
-            player.setLast41Points(points);
-            player.setLast41PowerPlayGoals(ppg);
-            player.setLast41PowerPlayPoints(ppp);
-        } else {
-            player.setLast20GamesPlayed(gp);
-            player.setLast20Goals(goals);
-            player.setLast20Assists(assists);
-            player.setLast20Points(points);
-            player.setLast20PowerPlayGoals(ppg);
-            player.setLast20PowerPlayPoints(ppp);
+        player.setLast41GamesPlayed(gp);
+        player.setLast41Goals(goals);
+        player.setLast41Assists(assists);
+        player.setLast41Points(points);
+        player.setLast41PowerPlayGoals(ppg);
+        player.setLast41PowerPlayPoints(ppp);
+        player.setLast41AvgToi(toiCount > 0 ? secondsToToi(totalToiSeconds / toiCount) : null);
+    }
+
+    private void computeSplit20(Player player, List<JsonNode> playerGamesInWindow) {
+        int gp = 0, goals = 0, assists = 0, points = 0, ppg = 0, ppp = 0;
+        long totalToiSeconds = 0;
+        int toiCount = 0;
+
+        for (JsonNode g : playerGamesInWindow) {
+            gp++;
+            goals   += g.path("goals").asInt(0);
+            assists += g.path("assists").asInt(0);
+            points  += g.path("points").asInt(0);
+            ppg     += g.path("powerPlayGoals").asInt(0);
+            ppp     += g.path("powerPlayPoints").asInt(0);
+            String toi = g.path("toi").asText("");
+            if (!toi.isEmpty()) {
+                totalToiSeconds += toiToSeconds(toi);
+                toiCount++;
+            }
         }
+
+        player.setLast20GamesPlayed(gp);
+        player.setLast20Goals(goals);
+        player.setLast20Assists(assists);
+        player.setLast20Points(points);
+        player.setLast20PowerPlayGoals(ppg);
+        player.setLast20PowerPlayPoints(ppp);
+        player.setLast20AvgToi(toiCount > 0 ? secondsToToi(totalToiSeconds / toiCount) : null);
+    }
+
+    /** Parses "MM:SS" or "H:MM:SS" into total seconds. */
+    private long toiToSeconds(String toi) {
+        if (toi == null || toi.isEmpty()) return 0;
+        String[] parts = toi.split(":");
+        try {
+            if (parts.length == 2) {
+                return Long.parseLong(parts[0]) * 60 + Long.parseLong(parts[1]);
+            } else if (parts.length == 3) {
+                return Long.parseLong(parts[0]) * 3600 + Long.parseLong(parts[1]) * 60 + Long.parseLong(parts[2]);
+            }
+        } catch (NumberFormatException ignored) {}
+        return 0;
+    }
+
+    /** Formats total seconds back to "MM:SS". */
+    private String secondsToToi(long totalSeconds) {
+        return String.format("%d:%02d", totalSeconds / 60, totalSeconds % 60);
     }
 }

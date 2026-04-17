@@ -25,11 +25,17 @@
           <mat-label>Players per team</mat-label>
           <input matInput type="number" [(ngModel)]="playersPerTeam">
         </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Draft order (team IDs, comma-separated)</mat-label>
-          <input matInput [(ngModel)]="draftOrder">
-        </mat-form-field>
-        <div class="action-buttons">
+
+        <label class="field-label">Draft order (select teams in order)</label>
+        <app-dropdown
+          [options]="teamDropdownOptions()"
+          [value]="draftOrderTeamIds"
+          [multiple]="true"
+          (valueChange)="draftOrderTeamIds = $event"
+          placeholder="Select teams in order…">
+        </app-dropdown>
+
+        <div class="action-buttons" style="margin-top: 12px;">
           <button class="btn-primary" (click)="saveDraftConfig()">Save Config</button>
           <button class="btn-primary" (click)="startDraft()">Start Draft</button>
         </div>
@@ -66,15 +72,24 @@
       </div>
 
       <h3>Assign users to team</h3>
-      <mat-form-field appearance="outline">
-        <mat-label>Team ID</mat-label>
-        <input matInput type="number" [(ngModel)]="assignTeamId">
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>User IDs (comma-separated)</mat-label>
-        <input matInput [(ngModel)]="assignUserIds">
-      </mat-form-field>
-      <button class="btn-primary" (click)="assignMembers()">Assign</button>
+      <label class="field-label">Team</label>
+      <app-dropdown
+        [options]="teamDropdownOptions()"
+        [value]="assignTeamId"
+        (valueChange)="assignTeamId = $event"
+        placeholder="Select team…">
+      </app-dropdown>
+
+      <label class="field-label" style="margin-top: 10px;">Users</label>
+      <app-dropdown
+        [options]="userDropdownOptions()"
+        [value]="assignUserIds"
+        [multiple]="true"
+        (valueChange)="assignUserIds = $event"
+        placeholder="Select users…">
+      </app-dropdown>
+
+      <button class="btn-primary" style="margin-top: 12px;" (click)="assignMembers()">Assign</button>
     </div>
 
     <!-- Rounds -->
@@ -82,13 +97,13 @@
       <h2>🏒 Rounds</h2>
       <div *ngFor="let r of rounds()" class="round-row">
         <span>{{ r.label }}</span>
-        <mat-form-field appearance="outline" class="status-select">
-          <mat-select [(ngModel)]="r.status" (ngModelChange)="updateRound(r)">
-            <mat-option value="UPCOMING">Upcoming</mat-option>
-            <mat-option value="ACTIVE">Active</mat-option>
-            <mat-option value="COMPLETED">Completed</mat-option>
-          </mat-select>
-        </mat-form-field>
+        <div class="status-select">
+          <app-dropdown
+            [options]="roundStatusOptions"
+            [value]="r.status"
+            (valueChange)="onRoundStatusChange(r, $event)">
+          </app-dropdown>
+        </div>
       </div>
     </div>
 

@@ -1,113 +1,121 @@
-.team-summary {
-  margin-bottom: 24px;
+// ── Team Selector ─────────────────────────────────────────────────────────────
+.team-select-row {
+  margin-bottom: 16px;
+}
+
+// ── Team Summary ──────────────────────────────────────────────────────────────
+.team-summary { margin-bottom: 16px; @media (min-width: 768px) { margin-bottom: 20px; } }
+
+.summary-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.summary-title {
+  h2 { margin: 0 0 4px; font-size: 17px; font-weight: 800; @media (min-width: 768px) { font-size: 20px; } }
+}
+
+.members-pill {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  padding: 3px 10px;
+  border-radius: 20px;
 }
 
 .summary-row {
   display: flex;
-  gap: 32px;
-  justify-content: center;
+  gap: 8px;
+  justify-content: space-around;
+
+  @media (min-width: 480px) { gap: 24px; justify-content: flex-start; }
+  @media (min-width: 768px) { gap: 32px; }
 }
 
-.summary-item {
-  text-align: center;
-}
+.summary-item { text-align: center; }
 
 .s-val {
   display: block;
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 800;
   color: var(--accent);
+
+  @media (min-width: 768px) { font-size: 28px; }
 }
 
 .s-label {
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
+// ── Roster Grid ───────────────────────────────────────────────────────────────
 .roster-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 8px;
+
+  @media (min-width: 480px) { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  @media (min-width: 768px) { gap: 12px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 }
 
 .player-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 12px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   transition: all 0.2s;
 
-  &:hover {
-    border-color: rgba(0, 195, 255, 0.15);
+  @media (min-width: 768px) { padding: 16px; gap: 12px; }
+
+  &:hover { border-color: rgba(0,195,255,0.15); }
+
+  // Eliminated: dimmed out, no text-decoration (that lives on class .eliminated in global styles)
+  &.eliminated {
+    opacity: 0.4;
+    filter: grayscale(50%);
   }
 }
 
 .pc-headshot {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--bg-secondary);
+  width: 44px; height: 44px; border-radius: 50%;
+  object-fit: cover; background: var(--bg-secondary); flex-shrink: 0;
+
+  @media (min-width: 768px) { width: 48px; height: 48px; }
 }
 
-.pc-body {
-  flex: 1;
-}
+.pc-body { flex: 1; min-width: 0; }
 
 .pc-name {
-  font-weight: 700;
-  font-size: 14px;
-  display: block;
+  font-weight: 700; font-size: 13px; display: block;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  @media (min-width: 768px) { font-size: 14px; }
 }
 
-.pc-meta {
-  color: var(--text-secondary);
-  font-size: 12px;
-}
+.pc-meta { color: var(--text-secondary); font-size: 11px; margin-top: 1px; display: block; }
 
 .pc-elim {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--danger);
-  background: rgba(239, 68, 68, 0.15);
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-top: 4px;
+  display: inline-block; font-size: 9px; font-weight: 700;
+  color: var(--danger); background: rgba(239,68,68,0.15);
+  padding: 2px 5px; border-radius: 4px; margin-top: 3px;
 }
 
-.pc-stats {
-  display: flex;
-  gap: 12px;
-}
+.pc-stats { display: flex; gap: 10px; flex-shrink: 0; }
 
 .pc-stat {
   text-align: center;
-
-  .val {
-    display: block;
-    font-weight: 700;
-    font-size: 16px;
-  }
-
-  .lbl {
-    font-size: 10px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-  }
+  .val { display: block; font-weight: 700; font-size: 14px; @media (min-width: 768px) { font-size: 16px; } }
+  .lbl { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
 }
 
-.pc-stat.highlight .val {
-  color: var(--accent);
-}
+.pc-stat.highlight .val { color: var(--accent); }
 
-.empty {
-  color: var(--text-muted);
-  text-align: center;
-  padding: 24px;
-}
+.empty { color: var(--text-muted); text-align: center; padding: 24px; }

@@ -2,115 +2,102 @@
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   cursor: pointer;
   transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
 
-  &:hover {
-    border-color: rgba(0, 195, 255, 0.1);
-  }
-
-  &.expanded {
-    border-color: rgba(0, 195, 255, 0.2);
-  }
+  &:hover { border-color: rgba(0,195,255,0.1); }
+  &.expanded { border-color: rgba(0,195,255,0.2); }
+  &:active { background: var(--bg-card-hover); }
 }
 
 .standing-header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
+  gap: 10px;
+  padding: 12px 14px;
+
+  @media (min-width: 768px) { gap: 16px; padding: 16px 20px; }
 }
 
-.team-main {
-  flex: 1;
-}
+.team-main { flex: 1; min-width: 0; }
 
 .team-name {
-  font-weight: 700;
-  font-size: 16px;
-  display: block;
+  font-weight: 700; font-size: 14px; display: block;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  @media (min-width: 768px) { font-size: 16px; }
 }
 
-.team-members {
-  color: var(--text-secondary);
-  font-size: 12px;
-}
+.team-members { color: var(--text-secondary); font-size: 11px; }
 
+// ── Points group ──────────────────────────────────────────────────────────────
 .points-group {
   display: flex;
-  gap: 20px;
+  gap: 12px;
+
+  @media (min-width: 768px) { gap: 20px; }
 }
 
+// Hide Players & Predictions labels on very small screens — just show Total
 .points-item {
   text-align: center;
 
-  .label {
-    display: block;
-    font-size: 10px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    letter-spacing: 0.5px;
+  // Hide non-total items on small phones if needed
+  &:not(.total) {
+    display: none;
+    @media (min-width: 400px) { display: block; }
   }
 
-  .val {
-    font-size: 18px;
-    font-weight: 700;
+  .label {
+    display: block; font-size: 9px; text-transform: uppercase;
+    color: var(--text-muted); letter-spacing: 0.5px;
+    @media (min-width: 768px) { font-size: 10px; }
   }
+
+  .val { font-size: 16px; font-weight: 700; @media (min-width: 768px) { font-size: 18px; } }
 
   &.total .val {
     color: var(--accent);
-    font-size: 22px;
+    font-size: 20px;
+    @media (min-width: 768px) { font-size: 22px; }
   }
 }
 
-.expand-icon {
-  color: var(--text-muted);
-  font-size: 12px;
-}
+.expand-icon { color: var(--text-muted); font-size: 11px; flex-shrink: 0; }
 
+// ── Breakdown ─────────────────────────────────────────────────────────────────
 .player-breakdown {
-  padding: 0 20px 16px;
+  padding: 0 14px 14px;
   border-top: 1px solid var(--border);
+
+  @media (min-width: 768px) { padding: 0 20px 16px; }
 }
 
 .pb-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-
-  &:last-child {
-    border-bottom: none;
-  }
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  &:last-child { border-bottom: none; }
 }
 
 .pb-headshot {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--bg-secondary);
+  width: 30px; height: 30px; border-radius: 50%;
+  object-fit: cover; background: var(--bg-secondary); flex-shrink: 0;
+
+  @media (min-width: 768px) { width: 32px; height: 32px; }
 }
 
-.pb-info {
-  flex: 1;
-}
+.pb-info { flex: 1; min-width: 0; }
 
 .pb-name {
-  font-weight: 600;
-  font-size: 13px;
-  display: block;
+  font-weight: 600; font-size: 12px; display: block;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  @media (min-width: 768px) { font-size: 13px; }
 }
 
-.pb-meta {
-  color: var(--text-secondary);
-  font-size: 11px;
-}
+.pb-meta { color: var(--text-secondary); font-size: 10px; }
 
-.empty {
-  color: var(--text-muted);
-  text-align: center;
-  padding: 24px;
-}
+.empty { color: var(--text-muted); text-align: center; padding: 24px; }

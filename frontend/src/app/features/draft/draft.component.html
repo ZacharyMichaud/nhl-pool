@@ -1,14 +1,33 @@
-<div class="page-container">
-  <div class="page-header">
-    <h1>Draft Board</h1>
-    <p>
-      <ng-container *ngIf="config()?.status === 'IN_PROGRESS'">🟢 Draft is live — Pick #{{ config()?.currentPickNumber }}</ng-container>
-      <ng-container *ngIf="config()?.status === 'COMPLETED'">✅ Draft complete!</ng-container>
-      <ng-container *ngIf="config()?.status !== 'IN_PROGRESS' && config()?.status !== 'COMPLETED'">⏳ Draft hasn't started yet</ng-container>
-    </p>
+<div class="draft-shell">
+
+  <!-- ── Sticky Status Bar ── -->
+  <div class="status-bar" [class.live]="config()?.status === 'IN_PROGRESS'" [class.done]="config()?.status === 'COMPLETED'">
+    <ng-container *ngIf="config()?.status === 'IN_PROGRESS'">
+      <span class="status-dot live-dot"></span>
+      <span>Draft is live</span>
+      <span class="pick-badge">Pick #{{ config()?.currentPickNumber }}</span>
+      <span class="my-turn-badge" *ngIf="isMyTurn()">YOUR TURN</span>
+    </ng-container>
+    <ng-container *ngIf="config()?.status === 'COMPLETED'">
+      <span class="status-dot done-dot"></span>
+      <span>Draft Complete</span>
+    </ng-container>
+    <ng-container *ngIf="config()?.status !== 'IN_PROGRESS' && config()?.status !== 'COMPLETED'">
+      <span class="status-dot pending-dot"></span>
+      <span>Draft hasn't started yet</span>
+    </ng-container>
   </div>
 
-  <div class="draft-layout">
+  <!-- ── Page Title (desktop only) ── -->
+  <div class="page-header desktop-only">
+    <h1>Draft Board</h1>
+  </div>
+
+  <!-- ════════════════════════════════
+       DESKTOP LAYOUT (≥ 900px)
+  ════════════════════════════════ -->
+  <div class="draft-layout desktop-layout">
+
     <!-- Available Players -->
     <div class="card players-panel">
       <h2>Available Players</h2>
@@ -21,7 +40,7 @@
           <mat-label>Team</mat-label>
           <mat-select [(ngModel)]="selectedTeam" (ngModelChange)="loadPlayers()">
             <mat-option value="">All Teams</mat-option>
-            <mat-option *ngFor="let t of teams" [value]="t">{{ t }}</mat-option>
+            <mat-option *ngFor="let t of teams()" [value]="t">{{ t }}</mat-option>
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline" class="filter-field">
@@ -32,147 +51,292 @@
             <mat-option value="L">LW</mat-option>
             <mat-option value="R">RW</mat-option>
             <mat-option value="D">D</mat-option>
-            <mat-option value="G">G</mat-option>
           </mat-select>
         </mat-form-field>
       </div>
-
-      <!-- Split + Mode Toggles -->
       <div class="toggle-row">
         <div class="toggle-group">
-          <button *ngFor="let s of splitOptions"
-                  [class.active]="selectedSplit === s.value"
-                  (click)="selectedSplit = s.value; filterPlayers()">
-            {{ s.label }}
-          </button>
+          <button *ngFor="let s of splitOptions" [class.active]="selectedSplit === s.value"
+                  (click)="selectedSplit = s.value; filterPlayers()">{{ s.label }}</button>
         </div>
         <div class="toggle-group">
           <button [class.active]="!perGameMode" (click)="perGameMode = false; filterPlayers()">Totals</button>
           <button [class.active]="perGameMode" (click)="perGameMode = true; filterPlayers()">Per Game</button>
         </div>
       </div>
+      <ng-container *ngTemplateOutlet="playersTable"></ng-container>
+    </div>
 
-      <!-- Sortable Stats Table -->
-      <div class="stats-table-wrapper">
-        <table class="stats-table">
-          <thead>
-            <tr>
-              <th class="col-watch" *ngIf="auth.teamId()">⭐</th>
-              <th class="col-player">Player</th>
-              <th class="col-pos">Pos</th>
-              <th class="col-team">Team</th>
-              <th class="col-stat sortable" (click)="sortBy('gp')" [class.active]="sortColumn === 'gp'">
-                GP <span class="sort-arrow">{{ getSortArrow('gp') }}</span>
-              </th>
-              <th class="col-stat sortable" (click)="sortBy('g')" [class.active]="sortColumn === 'g'">
-                G <span class="sort-arrow">{{ getSortArrow('g') }}</span>
-              </th>
-              <th class="col-stat sortable" (click)="sortBy('a')" [class.active]="sortColumn === 'a'">
-                A <span class="sort-arrow">{{ getSortArrow('a') }}</span>
-              </th>
-              <th class="col-stat sortable" (click)="sortBy('pts')" [class.active]="sortColumn === 'pts'">
-                PTS <span class="sort-arrow">{{ getSortArrow('pts') }}</span>
-              </th>
-              <th class="col-stat sortable" (click)="sortBy('ppg')" [class.active]="sortColumn === 'ppg'">
-                P/GP <span class="sort-arrow">{{ getSortArrow('ppg') }}</span>
-              </th>
-              <th class="col-stat sortable" (click)="sortBy('pwg')" [class.active]="sortColumn === 'pwg'">
-                PPG <span class="sort-arrow">{{ getSortArrow('pwg') }}</span>
-              </th>
-              <th class="col-stat sortable" (click)="sortBy('ppp')" [class.active]="sortColumn === 'ppp'">
-                PPP <span class="sort-arrow">{{ getSortArrow('ppp') }}</span>
-              </th>
-              <th class="col-stat sortable" *ngIf="selectedSplit === 'full'" (click)="sortBy('toi')" [class.active]="sortColumn === 'toi'">
-                TOI/GP <span class="sort-arrow">{{ getSortArrow('toi') }}</span>
-              </th>
-              <th class="col-action" *ngIf="config()?.status === 'IN_PROGRESS'"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let p of filteredPlayers()" class="player-row">
-              <!-- Watchlist star toggle -->
-              <td class="col-watch" *ngIf="auth.teamId()">
-                <button class="star-btn"
-                        [class.starred]="isWatchlisted(p)"
-                        (click)="$event.stopPropagation(); toggleWatchlist(p)"
-                        [title]="isWatchlisted(p) ? 'Remove from watchlist' : 'Add to watchlist'">
-                  {{ isWatchlisted(p) ? '⭐' : '☆' }}
-                </button>
-              </td>
-              <td class="col-player">
-                <div class="player-cell">
-                  <img [src]="p.headshotUrl" class="player-headshot" loading="lazy" onerror="this.style.display='none'">
-                  <span class="player-name">{{ p.firstName }} {{ p.lastName }}</span>
-                </div>
-              </td>
-              <td class="col-pos">{{ p.position }}</td>
-              <td class="col-team">{{ p.teamAbbrev }}</td>
-              <td class="col-stat">{{ getStat(p, 'gp') }}</td>
-              <td class="col-stat">{{ getDisplayStat(p, 'g') }}</td>
-              <td class="col-stat">{{ getDisplayStat(p, 'a') }}</td>
-              <td class="col-stat highlight">{{ getDisplayStat(p, 'pts') }}</td>
-              <td class="col-stat">{{ getDisplayStat(p, 'ppg') }}</td>
-              <td class="col-stat">{{ getDisplayStat(p, 'pwg') }}</td>
-              <td class="col-stat">{{ getDisplayStat(p, 'ppp') }}</td>
-              <td class="col-stat" *ngIf="selectedSplit === 'full'">{{ p.regularSeasonAvgToi || '-' }}</td>
-              <td class="col-action" *ngIf="config()?.status === 'IN_PROGRESS' && isMyTurn()">
-                <button class="btn-primary pick-btn" (click)="$event.stopPropagation(); draftPlayer(p)">Pick</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p *ngIf="filteredPlayers().length === 0" class="empty">No available players found</p>
+    <!-- Right Column -->
+    <div class="right-column">
+      <div class="card watchlist-panel" *ngIf="auth.teamId()">
+        <ng-container *ngTemplateOutlet="watchlistContent"></ng-container>
+      </div>
+      <div class="card history-panel">
+        <div class="history-header">
+          <h2>Draft History</h2>
+          <app-dropdown
+            class="history-team-dropdown"
+            [options]="poolTeamOptions()"
+            [value]="historyTeamValue"
+            (valueChange)="setHistoryTeam($event)">
+          </app-dropdown>
+        </div>
+        <ng-container *ngTemplateOutlet="historyContent"></ng-container>
       </div>
     </div>
 
-    <!-- Right Column: Watchlist + Draft History -->
-    <div class="right-column">
+  </div>
 
-      <!-- Watchlist Panel -->
-      <div class="card watchlist-panel" *ngIf="auth.teamId()">
-        <div class="watchlist-header">
-          <h2>My Watchlist</h2>
-          <span class="watchlist-count" *ngIf="watchlist().length > 0">{{ watchlist().length }}</span>
-        </div>
+  <!-- ════════════════════════════════
+       MOBILE LAYOUT (< 900px)
+  ════════════════════════════════ -->
+  <div class="mobile-layout">
 
-        <p *ngIf="watchlist().length === 0" class="empty watchlist-empty">
-          ☆ Star players to add them here
-        </p>
-
-        <div class="watchlist-list">
-          <div *ngFor="let entry of watchlist(); let i = index"
-               class="watchlist-item"
-               [class.drafted]="entry.player.drafted">
-            <span class="wl-rank">{{ i + 1 }}</span>
-            <img [src]="entry.player.headshotUrl" class="wl-headshot" loading="lazy" onerror="this.style.display='none'">
-            <div class="wl-info">
-              <span class="wl-name">{{ entry.player.firstName }} {{ entry.player.lastName }}</span>
-              <span class="wl-meta">{{ entry.player.position }} · {{ entry.player.teamAbbrev }}</span>
-            </div>
-            <div class="wl-actions">
-              <button class="wl-btn" (click)="moveUp(i)" [disabled]="i === 0" title="Move up">↑</button>
-              <button class="wl-btn" (click)="moveDown(i)" [disabled]="i === watchlist().length - 1" title="Move down">↓</button>
-              <button class="wl-btn wl-remove" (click)="removeFromWatchlist(entry.player)" title="Remove">✕</button>
-            </div>
-          </div>
+    <!-- Players Tab -->
+    <div class="mobile-panel" [class.active]="activeTab() === 'players'">
+      <!-- Search bar -->
+      <div class="mobile-search-bar">
+        <div class="mobile-search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="mobile-search-input" [(ngModel)]="searchQuery" (ngModelChange)="filterPlayers()" placeholder="Search player...">
         </div>
       </div>
 
-      <!-- Draft History -->
-      <div class="card history-panel">
+      <!-- Filter dropdowns -->
+      <div class="mobile-filter-row">
+        <app-dropdown
+          class="mobile-filter-dropdown"
+          [options]="positionOptions"
+          [value]="selectedPosition"
+          (valueChange)="selectedPosition = $event; loadPlayers()">
+        </app-dropdown>
+        <app-dropdown
+          class="mobile-filter-dropdown"
+          [options]="teamOptions()"
+          [value]="selectedTeam"
+          (valueChange)="selectedTeam = $event; loadPlayers()">
+        </app-dropdown>
+      </div>
+
+      <!-- Split + Per-Game toggles -->
+      <div class="mobile-toggles">
+        <div class="toggle-group">
+          <button *ngFor="let s of splitOptions" [class.active]="selectedSplit === s.value"
+                  (click)="selectedSplit = s.value; filterPlayers()">{{ s.label }}</button>
+        </div>
+        <div class="toggle-group">
+          <button [class.active]="!perGameMode" (click)="perGameMode = false; filterPlayers()">Tot</button>
+          <button [class.active]="perGameMode" (click)="perGameMode = true; filterPlayers()">P/G</button>
+        </div>
+      </div>
+
+      <div class="mobile-table-wrapper">
+        <div class="stats-table-wrapper">
+          <table class="stats-table mobile-players-table">
+            <thead>
+              <tr>
+                <th class="col-player">Player</th>
+                <th class="col-stat sortable" (click)="sortBy('gp')" [class.active]="sortColumn === 'gp'">GP <span class="sort-arrow">{{ getSortArrow('gp') }}</span></th>
+                <th class="col-stat sortable" (click)="sortBy('g')" [class.active]="sortColumn === 'g'">G <span class="sort-arrow">{{ getSortArrow('g') }}</span></th>
+                <th class="col-stat sortable" (click)="sortBy('a')" [class.active]="sortColumn === 'a'">A <span class="sort-arrow">{{ getSortArrow('a') }}</span></th>
+                <th class="col-stat sortable" (click)="sortBy('pts')" [class.active]="sortColumn === 'pts'">PTS <span class="sort-arrow">{{ getSortArrow('pts') }}</span></th>
+                <th class="col-stat sortable" (click)="sortBy('pwg')" [class.active]="sortColumn === 'pwg'">PPG <span class="sort-arrow">{{ getSortArrow('pwg') }}</span></th>
+                <th class="col-stat sortable" (click)="sortBy('ppp')" [class.active]="sortColumn === 'ppp'">PPP <span class="sort-arrow">{{ getSortArrow('ppp') }}</span></th>
+                <th class="col-stat sortable" (click)="sortBy('toi')" [class.active]="sortColumn === 'toi'">TOI <span class="sort-arrow">{{ getSortArrow('toi') }}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of filteredPlayers()" class="player-row mobile-tappable-row"
+                  [class.watchlisted]="isWatchlisted(p)"
+                  (click)="openPlayerModal(p)">
+                <td class="col-player">
+                  <span class="player-name mobile-player-name-cell">{{ p.firstName.charAt(0) }}. {{ p.lastName }}</span>
+                </td>
+                <td class="col-stat">{{ getStat(p, 'gp') }}</td>
+                <td class="col-stat">{{ getDisplayStat(p, 'g') }}</td>
+                <td class="col-stat">{{ getDisplayStat(p, 'a') }}</td>
+                <td class="col-stat highlight">{{ getDisplayStat(p, 'pts') }}</td>
+                <td class="col-stat">{{ getDisplayStat(p, 'pwg') }}</td>
+                <td class="col-stat">{{ getDisplayStat(p, 'ppp') }}</td>
+                <td class="col-stat">{{ p.regularSeasonAvgToi || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p *ngIf="filteredPlayers().length === 0" class="empty">No available players found</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Watchlist Tab -->
+    <div class="mobile-panel" [class.active]="activeTab() === 'watchlist'">
+      <div class="mobile-panel-header">
+        <h2>My Watchlist</h2>
+        <span class="watchlist-count" *ngIf="watchlist().length > 0">{{ watchlist().length }}</span>
+      </div>
+      <ng-container *ngTemplateOutlet="watchlistContent"></ng-container>
+    </div>
+
+    <!-- History Tab -->
+    <div class="mobile-panel" [class.active]="activeTab() === 'history'">
+      <div class="mobile-panel-header">
         <h2>Draft History</h2>
-        <div *ngFor="let pick of board()" class="pick-row">
-          <span class="pick-num">#{{ pick.pickNumber }}</span>
-          <img [src]="pick.player?.headshotUrl" class="pick-headshot" loading="lazy" onerror="this.style.display='none'">
-          <div class="pick-info">
-            <span class="pick-player">{{ pick.player?.firstName }} {{ pick.player?.lastName }}</span>
-            <span class="pick-team">{{ pick.team?.name }}</span>
+        <app-dropdown
+          class="history-team-dropdown"
+          [options]="poolTeamOptions()"
+          [value]="historyTeamValue"
+          (valueChange)="setHistoryTeam($event)">
+        </app-dropdown>
+      </div>
+      <div class="mobile-history-scroll">
+        <ng-container *ngTemplateOutlet="historyContent"></ng-container>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ── Mobile Bottom Tab Bar ── -->
+  <nav class="mobile-tab-bar">
+    <button *ngFor="let tab of mobileTabs" class="tab-btn" [class.active]="activeTab() === tab.id"
+            (click)="setTab(tab.id)">
+      <span class="tab-icon">{{ tab.icon }}</span>
+      <span class="tab-label">{{ tab.label }}</span>
+      <span class="tab-badge" *ngIf="tab.id === 'watchlist' && watchlistCount() > 0">{{ watchlistCount() }}</span>
+    </button>
+  </nav>
+
+  <!-- ── Player Detail Bottom Sheet ── -->
+  <div class="player-modal-backdrop" *ngIf="selectedPlayer()" (click)="closePlayerModal()">
+    <div class="player-modal-sheet" (click)="$event.stopPropagation()">
+      <div class="player-modal-handle"></div>
+
+      <div class="player-modal-header">
+        <img [src]="selectedPlayer().headshotUrl" class="player-modal-headshot"
+             loading="lazy" onerror="this.style.display='none'">
+        <div class="player-modal-identity">
+          <div class="player-modal-name">{{ selectedPlayer().firstName }} {{ selectedPlayer().lastName }}</div>
+          <div class="player-modal-meta">
+            <span class="player-modal-pos">{{ selectedPlayer().position }}</span>
+            <span class="player-modal-team">{{ selectedPlayer().teamAbbrev }}</span>
           </div>
-          <span class="pick-pos">{{ pick.player?.position }}</span>
         </div>
-        <p *ngIf="board().length === 0" class="empty">No picks yet</p>
       </div>
 
+      <div class="player-modal-stats-grid">
+        <div class="modal-stat-item" *ngFor="let stat of getModalStats(selectedPlayer())">
+          <div class="modal-stat-val" [class.highlight]="stat.key === 'pts'">{{ stat.val }}</div>
+          <div class="modal-stat-lbl">{{ stat.label }}</div>
+        </div>
+      </div>
+
+      <div class="player-modal-actions">
+        <button class="modal-watchlist-btn" *ngIf="auth.teamId()"
+                [class.starred]="isWatchlisted(selectedPlayer())"
+                (click)="toggleWatchlist(selectedPlayer())">
+          {{ isWatchlisted(selectedPlayer()) ? '⭐ Watchlisted' : '☆ Watchlist' }}
+        </button>
+        <button class="btn-primary modal-draft-btn"
+                *ngIf="config()?.status === 'IN_PROGRESS' && isMyTurn()"
+                (click)="draftPlayer(selectedPlayer()); closePlayerModal()">
+          🏒 Draft
+        </button>
+      </div>
     </div>
   </div>
+
 </div>
+
+<!-- ════════════════════════════════
+     SHARED TEMPLATES
+════════════════════════════════ -->
+
+<!-- Players Table Template (desktop) -->
+<ng-template #playersTable>
+  <div class="stats-table-wrapper">
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th class="col-watch" *ngIf="auth.teamId()">⭐</th>
+          <th class="col-player">Player</th>
+          <th class="col-pos">Pos</th>
+          <th class="col-team">Team</th>
+          <th class="col-stat sortable" (click)="sortBy('gp')" [class.active]="sortColumn === 'gp'">GP <span class="sort-arrow">{{ getSortArrow('gp') }}</span></th>
+          <th class="col-stat sortable" (click)="sortBy('g')" [class.active]="sortColumn === 'g'">G <span class="sort-arrow">{{ getSortArrow('g') }}</span></th>
+          <th class="col-stat sortable" (click)="sortBy('a')" [class.active]="sortColumn === 'a'">A <span class="sort-arrow">{{ getSortArrow('a') }}</span></th>
+          <th class="col-stat sortable" (click)="sortBy('pts')" [class.active]="sortColumn === 'pts'">PTS <span class="sort-arrow">{{ getSortArrow('pts') }}</span></th>
+          <th class="col-stat sortable" (click)="sortBy('ppg')" [class.active]="sortColumn === 'ppg'">P/GP <span class="sort-arrow">{{ getSortArrow('ppg') }}</span></th>
+          <th class="col-stat sortable" (click)="sortBy('pwg')" [class.active]="sortColumn === 'pwg'">PPG <span class="sort-arrow">{{ getSortArrow('pwg') }}</span></th>
+          <th class="col-stat sortable" (click)="sortBy('ppp')" [class.active]="sortColumn === 'ppp'">PPP <span class="sort-arrow">{{ getSortArrow('ppp') }}</span></th>
+          <th class="col-stat sortable" *ngIf="selectedSplit === 'full'" (click)="sortBy('toi')" [class.active]="sortColumn === 'toi'">TOI/GP <span class="sort-arrow">{{ getSortArrow('toi') }}</span></th>
+          <th class="col-action" *ngIf="config()?.status === 'IN_PROGRESS'"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of filteredPlayers()" class="player-row">
+          <td class="col-watch" *ngIf="auth.teamId()">
+            <button class="star-btn" [class.starred]="isWatchlisted(p)"
+                    (click)="$event.stopPropagation(); toggleWatchlist(p)"
+                    [title]="isWatchlisted(p) ? 'Remove from watchlist' : 'Add to watchlist'">
+              {{ isWatchlisted(p) ? '⭐' : '☆' }}
+            </button>
+          </td>
+          <td class="col-player">
+            <div class="player-cell">
+              <img [src]="p.headshotUrl" class="player-headshot" loading="lazy" onerror="this.style.display='none'">
+              <span class="player-name">{{ p.firstName.charAt(0) }}. {{ p.lastName }}</span>
+            </div>
+          </td>
+          <td class="col-pos">{{ p.position }}</td>
+          <td class="col-team">{{ p.teamAbbrev }}</td>
+          <td class="col-stat">{{ getStat(p, 'gp') }}</td>
+          <td class="col-stat">{{ getDisplayStat(p, 'g') }}</td>
+          <td class="col-stat">{{ getDisplayStat(p, 'a') }}</td>
+          <td class="col-stat highlight">{{ getDisplayStat(p, 'pts') }}</td>
+          <td class="col-stat">{{ getDisplayStat(p, 'ppg') }}</td>
+          <td class="col-stat">{{ getDisplayStat(p, 'pwg') }}</td>
+          <td class="col-stat">{{ getDisplayStat(p, 'ppp') }}</td>
+          <td class="col-stat" *ngIf="selectedSplit === 'full'">{{ p.regularSeasonAvgToi || '-' }}</td>
+          <td class="col-action" *ngIf="config()?.status === 'IN_PROGRESS' && isMyTurn()">
+            <button class="btn-primary pick-btn" (click)="$event.stopPropagation(); draftPlayer(p)">Pick</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="filteredPlayers().length === 0" class="empty">No available players found</p>
+  </div>
+</ng-template>
+
+<!-- Watchlist Content Template -->
+<ng-template #watchlistContent>
+  <p *ngIf="watchlist().length === 0" class="empty watchlist-empty">☆ Star players to add them here</p>
+  <div class="watchlist-list">
+    <div *ngFor="let entry of watchlist(); let i = index" class="watchlist-item" [class.drafted]="entry.player.drafted">
+      <span class="wl-rank">{{ i + 1 }}</span>
+      <img [src]="entry.player.headshotUrl" class="wl-headshot" loading="lazy" onerror="this.style.display='none'">
+      <div class="wl-info">
+        <span class="wl-name">{{ entry.player.firstName }} {{ entry.player.lastName }}</span>
+        <span class="wl-meta">{{ entry.player.position }} · {{ entry.player.teamAbbrev }}</span>
+      </div>
+      <div class="wl-actions">
+        <button class="wl-btn" (click)="moveUp(i)" [disabled]="i === 0" title="Move up">↑</button>
+        <button class="wl-btn" (click)="moveDown(i)" [disabled]="i === watchlist().length - 1" title="Move down">↓</button>
+        <button class="wl-btn wl-remove" (click)="removeFromWatchlist(entry.player)" title="Remove">✕</button>
+      </div>
+    </div>
+  </div>
+</ng-template>
+
+<!-- History Content Template -->
+<ng-template #historyContent>
+  <div *ngFor="let pick of filteredHistory()" class="pick-row">
+    <span class="pick-num">#{{ pick.pickNumber }}</span>
+    <img [src]="pick.player?.headshotUrl" class="pick-headshot" loading="lazy" onerror="this.style.display='none'">
+    <div class="pick-info">
+      <span class="pick-player">{{ pick.player?.firstName }} {{ pick.player?.lastName }}</span>
+      <span class="pick-team">{{ pick.team?.name }}</span>
+    </div>
+    <span class="pick-pos">{{ pick.player?.position }}</span>
+  </div>
+  <p *ngIf="filteredHistory().length === 0" class="empty">No picks yet</p>
+</ng-template>

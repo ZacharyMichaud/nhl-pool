@@ -1,0 +1,37 @@
+<div class="custom-dropdown" [class.open]="open">
+
+  <!-- Trigger -->
+  <button class="dropdown-trigger" type="button" (click)="toggle()">
+    <div class="trigger-content">
+      <ng-container *ngIf="triggerLabel; else showPlaceholder">
+        <span class="trigger-label">{{ triggerLabel }}</span>
+        <span class="trigger-meta" *ngIf="!multiple && (selectedOption?.sublabel || selectedOption?.badge)">
+          <span *ngIf="selectedOption?.sublabel">{{ selectedOption!.sublabel }}</span>
+          <span class="you-badge" *ngIf="selectedOption?.badge">{{ selectedOption!.badge }}</span>
+        </span>
+      </ng-container>
+      <ng-template #showPlaceholder>
+        <span class="trigger-placeholder">{{ placeholder }}</span>
+      </ng-template>
+    </div>
+    <span class="dropdown-arrow" [class.rotated]="open">▾</span>
+  </button>
+
+  <!-- Options panel (fixed-positioned to escape overflow:hidden parents) -->
+  <div class="dropdown-panel" *ngIf="open" [ngStyle]="panelStyle">
+    <button
+      *ngFor="let opt of options"
+      type="button"
+      class="dropdown-option"
+      [class.selected]="isSelected(opt)"
+      (click)="select(opt)">
+      <div class="option-info">
+        <span class="option-label">{{ opt.label }}</span>
+        <span class="option-sublabel" *ngIf="opt.sublabel">{{ opt.sublabel }}</span>
+      </div>
+      <span class="you-badge" *ngIf="opt.badge">{{ opt.badge }}</span>
+      <span class="option-check" *ngIf="isSelected(opt)">✓</span>
+    </button>
+  </div>
+
+</div>

@@ -61,6 +61,8 @@ public class Player {
     private Integer last41PowerPlayGoals = 0;
     @Builder.Default
     private Integer last41PowerPlayPoints = 0;
+    @Column(name = "last41_avg_toi")
+    private String last41AvgToi;
 
     // Regular season stats — last 20 games
     @Builder.Default
@@ -75,6 +77,8 @@ public class Player {
     private Integer last20PowerPlayGoals = 0;
     @Builder.Default
     private Integer last20PowerPlayPoints = 0;
+    @Column(name = "last20_avg_toi")
+    private String last20AvgToi;
 
     // Playoff stats (real-time synced)
     @Builder.Default
