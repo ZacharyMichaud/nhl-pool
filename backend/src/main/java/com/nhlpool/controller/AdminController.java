@@ -162,6 +162,6 @@ public class AdminController {
 
     @GetMapping("/users")
     public ResponseEntity<List<User>> getUsers() {
-        return ResponseEntity.ok(userRepository.findAll());
+        return ResponseEntity.ok(userRepository.findAllWithTeams());
     }
 }
