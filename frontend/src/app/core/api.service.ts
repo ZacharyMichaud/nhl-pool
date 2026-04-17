@@ -36,6 +36,21 @@ export class ApiService {
 
   makePick(playerId: number): Observable<any> { return this.http.post(`${ API }/draft/pick`, { playerId }); }
 
+  // Watchlist
+  getWatchlist(): Observable<any[]> { return this.http.get<any[]>(`${ API }/draft/watchlist`); }
+
+  addToWatchlist(playerId: number): Observable<void> {
+    return this.http.post<void>(`${ API }/draft/watchlist/${ playerId }`, {});
+  }
+
+  removeFromWatchlist(playerId: number): Observable<void> {
+    return this.http.delete<void>(`${ API }/draft/watchlist/${ playerId }`);
+  }
+
+  reorderWatchlist(playerIds: number[]): Observable<void> {
+    return this.http.put<void>(`${ API }/draft/watchlist/reorder`, { playerIds });
+  }
+
   // Teams
   getTeams(): Observable<any[]> { return this.http.get<any[]>(`${ API }/teams`); }
 

@@ -13,6 +13,7 @@ import com.nhlpool.repository.DraftConfigRepository;
 import com.nhlpool.repository.DraftPickRepository;
 import com.nhlpool.repository.PlayerRepository;
 import com.nhlpool.repository.PoolTeamRepository;
+import com.nhlpool.repository.WatchlistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ public class DraftService {
     private final DraftPickRepository draftPickRepository;
     private final PlayerRepository playerRepository;
     private final PoolTeamRepository poolTeamRepository;
+    private final WatchlistRepository watchlistRepository;
 
     public DraftConfig getConfig() {
         return draftConfigRepository.findAll().stream().findFirst()
@@ -102,6 +104,9 @@ public class DraftService {
 
         player.setDrafted(true);
         playerRepository.save(player);
+
+        // Remove the drafted player from every team's watchlist
+        watchlistRepository.deleteByPlayerId(playerId);
 
         // Advance pick
         config.setCurrentPickNumber(config.getCurrentPickNumber() + 1);

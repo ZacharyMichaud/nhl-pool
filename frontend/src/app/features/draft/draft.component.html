@@ -57,6 +57,7 @@
         <table class="stats-table">
           <thead>
             <tr>
+              <th class="col-watch" *ngIf="auth.teamId()">⭐</th>
               <th class="col-player">Player</th>
               <th class="col-pos">Pos</th>
               <th class="col-team">Team</th>
@@ -89,6 +90,15 @@
           </thead>
           <tbody>
             <tr *ngFor="let p of filteredPlayers()" class="player-row">
+              <!-- Watchlist star toggle -->
+              <td class="col-watch" *ngIf="auth.teamId()">
+                <button class="star-btn"
+                        [class.starred]="isWatchlisted(p)"
+                        (click)="$event.stopPropagation(); toggleWatchlist(p)"
+                        [title]="isWatchlisted(p) ? 'Remove from watchlist' : 'Add to watchlist'">
+                  {{ isWatchlisted(p) ? '⭐' : '☆' }}
+                </button>
+              </td>
               <td class="col-player">
                 <div class="player-cell">
                   <img [src]="p.headshotUrl" class="player-headshot" loading="lazy" onerror="this.style.display='none'">
@@ -115,19 +125,54 @@
       </div>
     </div>
 
-    <!-- Draft History -->
-    <div class="card history-panel">
-      <h2>Draft History</h2>
-      <div *ngFor="let pick of board()" class="pick-row">
-        <span class="pick-num">#{{ pick.pickNumber }}</span>
-        <img [src]="pick.player?.headshotUrl" class="pick-headshot" loading="lazy" onerror="this.style.display='none'">
-        <div class="pick-info">
-          <span class="pick-player">{{ pick.player?.firstName }} {{ pick.player?.lastName }}</span>
-          <span class="pick-team">{{ pick.team?.name }}</span>
+    <!-- Right Column: Watchlist + Draft History -->
+    <div class="right-column">
+
+      <!-- Watchlist Panel -->
+      <div class="card watchlist-panel" *ngIf="auth.teamId()">
+        <div class="watchlist-header">
+          <h2>My Watchlist</h2>
+          <span class="watchlist-count" *ngIf="watchlist().length > 0">{{ watchlist().length }}</span>
         </div>
-        <span class="pick-pos">{{ pick.player?.position }}</span>
+
+        <p *ngIf="watchlist().length === 0" class="empty watchlist-empty">
+          ☆ Star players to add them here
+        </p>
+
+        <div class="watchlist-list">
+          <div *ngFor="let entry of watchlist(); let i = index"
+               class="watchlist-item"
+               [class.drafted]="entry.player.drafted">
+            <span class="wl-rank">{{ i + 1 }}</span>
+            <img [src]="entry.player.headshotUrl" class="wl-headshot" loading="lazy" onerror="this.style.display='none'">
+            <div class="wl-info">
+              <span class="wl-name">{{ entry.player.firstName }} {{ entry.player.lastName }}</span>
+              <span class="wl-meta">{{ entry.player.position }} · {{ entry.player.teamAbbrev }}</span>
+            </div>
+            <div class="wl-actions">
+              <button class="wl-btn" (click)="moveUp(i)" [disabled]="i === 0" title="Move up">↑</button>
+              <button class="wl-btn" (click)="moveDown(i)" [disabled]="i === watchlist().length - 1" title="Move down">↓</button>
+              <button class="wl-btn wl-remove" (click)="removeFromWatchlist(entry.player)" title="Remove">✕</button>
+            </div>
+          </div>
+        </div>
       </div>
-      <p *ngIf="board().length === 0" class="empty">No picks yet</p>
+
+      <!-- Draft History -->
+      <div class="card history-panel">
+        <h2>Draft History</h2>
+        <div *ngFor="let pick of board()" class="pick-row">
+          <span class="pick-num">#{{ pick.pickNumber }}</span>
+          <img [src]="pick.player?.headshotUrl" class="pick-headshot" loading="lazy" onerror="this.style.display='none'">
+          <div class="pick-info">
+            <span class="pick-player">{{ pick.player?.firstName }} {{ pick.player?.lastName }}</span>
+            <span class="pick-team">{{ pick.team?.name }}</span>
+          </div>
+          <span class="pick-pos">{{ pick.player?.position }}</span>
+        </div>
+        <p *ngIf="board().length === 0" class="empty">No picks yet</p>
+      </div>
+
     </div>
   </div>
 </div>
