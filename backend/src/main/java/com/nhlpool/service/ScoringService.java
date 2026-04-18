@@ -18,12 +18,14 @@ public class ScoringService {
     private final DraftPickRepository draftPickRepository;
     private final PredictionRepository predictionRepository;
     private final PoolTeamRepository poolTeamRepository;
+    private final PlayerRepository playerRepository;
 
     public record TeamStanding(
             Long teamId, String teamName, List<String> memberNames,
             int playerPoints, int predictionPoints, int totalPoints,
             int activePlayers, int eliminatedPlayers,
-            List<PlayerScore> playerScores) {}
+            List<PlayerScore> playerScores,
+            Long connSmythePredictionPlayerId, String connSmythePlayerName) {}
 
     public record PlayerScore(
             Long playerId, String playerName, String position, String teamAbbrev,
@@ -58,9 +60,17 @@ public class ScoringService {
             List<String> memberNames = team.getMembers().stream()
                     .map(User::getDisplayName).collect(Collectors.toList());
 
+            Long csPlayerId = team.getConnSmythePredictionPlayerId();
+            String csPlayerName = null;
+            if (csPlayerId != null) {
+                csPlayerName = playerRepository.findById(csPlayerId)
+                        .map(p -> p.getFullName()).orElse(null);
+            }
+
             return new TeamStanding(team.getId(), team.getName(), memberNames,
                     playerPoints, predictionPoints, playerPoints + predictionPoints,
-                    activePlayers, eliminatedPlayers, playerScores);
+                    activePlayers, eliminatedPlayers, playerScores,
+                    csPlayerId, csPlayerName);
         }).sorted(Comparator.comparingInt(TeamStanding::totalPoints).reversed())
           .collect(Collectors.toList());
     }

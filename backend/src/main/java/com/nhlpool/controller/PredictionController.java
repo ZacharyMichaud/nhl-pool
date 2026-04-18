@@ -24,6 +24,7 @@ public class PredictionController {
     private final PoolRoundRepository poolRoundRepository;
 
     @GetMapping("/round/{roundNumber}")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<Prediction>> getPredictionsByRound(
             @PathVariable Integer roundNumber,
             @AuthenticationPrincipal User user) {

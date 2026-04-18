@@ -54,6 +54,10 @@ export class ApiService {
   // Teams
   getTeams(): Observable<any[]> { return this.http.get<any[]>(`${ API }/teams`); }
 
+  setConnSmythe(teamId: number, playerId: number): Observable<any> {
+    return this.http.put(`${ API }/teams/${ teamId }/conn-smythe`, { playerId });
+  }
+
   // Standings
   getStandings(): Observable<any[]> { return this.http.get<any[]>(`${ API }/standings`); }
 
