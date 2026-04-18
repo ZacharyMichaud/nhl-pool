@@ -35,6 +35,10 @@ export class DraftComponent implements OnInit, OnDestroy {
   config = signal<any>(null);
   poolTeams = signal<any[]>([]);
 
+  // ── Draft Complete Modal ──
+  showDraftComplete = signal<boolean>(false);
+  private previousConfigStatus: string | null = null;
+
   // ── Draft History ──
   /** null = show all teams */
   selectedHistoryTeamId = signal<number | null>(null);
@@ -122,7 +126,7 @@ export class DraftComponent implements OnInit, OnDestroy {
       this.loadPoolTeams();
       this.api.getDraftConfig()
         .pipe(catchError(() => EMPTY))
-        .subscribe((c) => this.config.set(c));
+        .subscribe((c) => this.setConfig(c));
     });
 
     // ── Real-time WebSocket pick events ──
@@ -135,7 +139,7 @@ export class DraftComponent implements OnInit, OnDestroy {
       this.loadWatchlist();
       this.api.getDraftConfig()
         .pipe(catchError(() => EMPTY))
-        .subscribe((c) => this.config.set(c));
+        .subscribe((c) => this.setConfig(c));
     }, 5000);
   }
 
@@ -328,7 +332,7 @@ export class DraftComponent implements OnInit, OnDestroy {
         this.loadPlayers();
         this.loadBoard();
         this.loadWatchlist();
-        this.api.getDraftConfig().subscribe((c) => this.config.set(c));
+        this.api.getDraftConfig().subscribe((c) => this.setConfig(c));
       },
       error: (err) => this.snackBar.open(err.error?.error || 'Pick failed', 'OK', { duration: 4000 }),
     });
@@ -352,7 +356,7 @@ export class DraftComponent implements OnInit, OnDestroy {
     this.loadBoard();
     this.api.getDraftConfig()
       .pipe(catchError(() => EMPTY))
-      .subscribe((c) => this.config.set(c));
+      .subscribe((c) => this.setConfig(c));
 
     // 3. Show the animated popup
     this.livePickEvent.set(event);
@@ -363,6 +367,21 @@ export class DraftComponent implements OnInit, OnDestroy {
   dismissLivePick() {
     if (this.livePickTimer) clearTimeout(this.livePickTimer);
     this.livePickEvent.set(null);
+  }
+
+  /** Called whenever a fresh config arrives — detects the IN_PROGRESS → COMPLETED transition. */
+  private setConfig(c: any) {
+    const prev = this.previousConfigStatus;
+    this.previousConfigStatus = c?.status ?? null;
+    this.config.set(c);
+    if (prev === 'IN_PROGRESS' && c?.status === 'COMPLETED') {
+      this.dismissLivePick();
+      this.showDraftComplete.set(true);
+    }
+  }
+
+  closeDraftComplete() {
+    this.showDraftComplete.set(false);
   }
 
   formatLivePosition(pos: string | null | undefined): string {

@@ -1305,16 +1305,144 @@ $team-colors: (
 
 .live-pick-team-badge {
   display: inline-block;
-  padding: 5px 18px;
+  padding: 7px 22px;
   border-radius: 24px;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.3px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .live-pick-pick-num {
   font-size: 11px;
   color: var(--text-muted);
   font-weight: 600;
+}
+
+// ── Draft Complete Modal ───────────────────────────────────────────────────────
+@keyframes draft-complete-pop {
+  0%   { transform: scale(0.8) translateY(24px); opacity: 0; }
+  60%  { transform: scale(1.04) translateY(-4px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes trophy-bounce {
+  0%, 100% { transform: scale(1) rotate(-4deg); }
+  50%       { transform: scale(1.2) rotate(4deg); }
+}
+
+@keyframes confetti-fall {
+  0%   { transform: translateY(-10px) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translateY(220px) rotate(calc(var(--i) * 30deg)) scale(0.5); opacity: 0; }
+}
+
+.draft-complete-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  animation: modal-fade-in 0.2s ease;
+  padding: 20px;
+}
+
+.draft-complete-dialog {
+  position: relative;
+  background: linear-gradient(145deg, rgba(12, 22, 40, 0.98), rgba(6, 14, 28, 0.99));
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  border-radius: 24px;
+  padding: 40px 36px 32px;
+  width: 100%;
+  max-width: 460px;
+  text-align: center;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(255, 215, 0, 0.08);
+  animation: draft-complete-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  overflow: hidden;
+}
+
+.draft-complete-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: confetti-fall 2.4s ease-in calc(var(--i) * 0.12s) both;
+
+  // 15 hardcoded pieces — left positions spread across the dialog width
+  &:nth-child(1)  { left:  1%; background: #00c3ff; }
+  &:nth-child(2)  { left:  8%; background: #f59e0b; }
+  &:nth-child(3)  { left: 15%; background: #a855f7; }
+  &:nth-child(4)  { left: 22%; background: #10b981; }
+  &:nth-child(5)  { left: 29%; background: #f43f5e; }
+  &:nth-child(6)  { left: 36%; background: #3b82f6; }
+  &:nth-child(7)  { left: 43%; background: #fb923c; }
+  &:nth-child(8)  { left: 50%; background: #e879f9; }
+  &:nth-child(9)  { left: 57%; background: #84cc16; }
+  &:nth-child(10) { left: 64%; background: #ffd700; }
+  &:nth-child(11) { left: 71%; background: #00c3ff; }
+  &:nth-child(12) { left: 78%; background: #f59e0b; }
+  &:nth-child(13) { left: 85%; background: #a855f7; }
+  &:nth-child(14) { left: 92%; background: #10b981; }
+  &:nth-child(15) { left: 98%; background: #f43f5e; }
+}
+
+.draft-complete-trophy {
+  font-size: 56px;
+  display: block;
+  animation: trophy-bounce 0.6s ease-in-out infinite alternate;
+  margin-bottom: 12px;
+}
+
+.draft-complete-title {
+  font-size: 28px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ffd700, #f59e0b, #ffd700);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+  margin: 0 0 8px;
+}
+
+.draft-complete-sub {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+.draft-complete-teams {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.dct-chip {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  // color + background picked up by team-badge-N classes
+}
+
+.draft-complete-close {
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: 14px;
+  letter-spacing: 0.3px;
 }

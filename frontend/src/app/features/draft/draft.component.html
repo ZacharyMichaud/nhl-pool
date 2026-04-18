@@ -292,7 +292,12 @@
   <div class="live-pick-popup" (click)="$event.stopPropagation()">
     <button class="live-pick-dismiss" (click)="dismissLivePick()">✕</button>
     <div class="live-pick-crown">🏒</div>
-    <div class="live-pick-label">Just Drafted</div>
+    <!-- Team who made the pick — shown first for maximum emphasis -->
+    <div class="live-pick-team-badge"
+         [class]="'live-pick-team-badge team-badge-' + teamColorIndex(livePickEvent()!.teamId)">
+      {{ livePickEvent()!.teamName }}
+    </div>
+    <div class="live-pick-label">just drafted</div>
     <div class="live-pick-player-row">
       <img [src]="livePickEvent()!.playerHeadshotUrl" class="live-pick-headshot"
            loading="lazy" onerror="this.style.display='none'">
@@ -306,13 +311,32 @@
         </div>
       </div>
     </div>
-    <div class="live-pick-team-badge"
-         [class]="'live-pick-team-badge team-badge-' + teamColorIndex(livePickEvent()!.teamId)">
-      {{ livePickEvent()!.teamName }}
-    </div>
     <div class="live-pick-pick-num">Pick #{{ livePickEvent()!.pickNumber }}</div>
   </div>
 </div>
+
+<!-- ════════════════════════════════
+     DRAFT COMPLETE MODAL
+════════════════════════════════ -->
+<div class="draft-complete-backdrop" *ngIf="showDraftComplete()" (click)="closeDraftComplete()">
+  <div class="draft-complete-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <div class="draft-complete-confetti">
+      <span *ngFor="let i of [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]"
+            class="confetti-piece" [style.--i]="i"></span>
+    </div>
+    <div class="draft-complete-trophy">🏆</div>
+    <h2 class="draft-complete-title">Draft Complete!</h2>
+    <p class="draft-complete-sub">All {{ board().length }} picks have been made. Good luck this playoff season!</p>
+    <div class="draft-complete-teams">
+      <div *ngFor="let team of poolTeams()" class="dct-chip"
+           [class]="'dct-chip team-badge-' + teamColorIndex(team.id)">
+        {{ team.name }}
+      </div>
+    </div>
+    <button class="btn-primary draft-complete-close" (click)="closeDraftComplete()">🏒 Let's Go!</button>
+  </div>
+</div>
+
 
 <!-- ════════════════════════════════
      SHARED TEMPLATES

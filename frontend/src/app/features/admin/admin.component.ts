@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,9 +17,11 @@ import { DropdownOption } from '../../shared/components/dropdown/dropdown.types'
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss',
 })
-export class AdminComponent implements OnInit {
+export class AdminComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private snackBar = inject(MatSnackBar);
+
+  private pollInterval: any;
 
   draftConfig = signal<any>(null);
   teams = signal<any[]>([]);
@@ -54,6 +56,12 @@ export class AdminComponent implements OnInit {
 
   ngOnInit() {
     this.loadAll();
+    // Auto-refresh every 5 s so admin panel mirrors live draft state
+    this.pollInterval = setInterval(() => this.loadAll(), 5000);
+  }
+
+  ngOnDestroy() {
+    if (this.pollInterval) clearInterval(this.pollInterval);
   }
 
   loadAll() {
@@ -165,8 +173,9 @@ export class AdminComponent implements OnInit {
   }
 
   getMemberNames(team: any): string {
-    if (!team.members || team.members.length === 0) return 'No members';
-    return team.members.map((m: any) => m.displayName).join(', ');
+    const members = this.users().filter((u: any) => u.team?.id === team.id);
+    if (members.length === 0) return 'No members';
+    return members.map((u: any) => u.displayName).join(', ');
   }
 
   updatePredictionRule(rule: any) {

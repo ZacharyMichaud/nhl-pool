@@ -41,8 +41,10 @@
         </div>
       </ng-container>
       <ng-template #draftActive>
-        <p>Current pick: <strong>#{{ draftConfig()?.currentPickNumber }}</strong></p>
-        <button class="btn-primary danger" (click)="resetDraft()">Reset Draft</button>
+        <p *ngIf="draftConfig()?.status === 'IN_PROGRESS'">Current pick: <strong>#{{ draftConfig()?.currentPickNumber }}</strong></p>
+        <div class="action-buttons">
+          <button class="btn-primary danger" (click)="resetDraft()">↩ Reset Draft</button>
+        </div>
       </ng-template>
     </div>
 

@@ -4,6 +4,7 @@ import com.nhlpool.domain.*;
 import com.nhlpool.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,13 +30,15 @@ public class ScoringService {
             String headshotUrl, int points, int goals, int assists,
             int gamesPlayed, boolean eliminated) {}
 
+    @Transactional(readOnly = true)
     public List<TeamStanding> getStandings() {
         List<PoolTeam> teams = poolTeamRepository.findAllWithMembers();
         Map<String, ScoringRule> rules = scoringRuleRepository.findAll().stream()
                 .collect(Collectors.toMap(ScoringRule::getStatName, r -> r));
 
         return teams.stream().map(team -> {
-            List<DraftPick> picks = draftPickRepository.findByTeamIdOrderByPickNumberAsc(team.getId());
+            // Use fetch-join query to eagerly load player + team, avoiding LazyInitializationException
+            List<DraftPick> picks = draftPickRepository.findByTeamIdWithPlayerOrderByPickNumberAsc(team.getId());
 
             List<PlayerScore> playerScores = picks.stream().map(pick -> {
                 Player p = pick.getPlayer();

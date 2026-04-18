@@ -177,4 +177,16 @@ public class AdminController {
     public ResponseEntity<List<User>> getUsers() {
         return ResponseEntity.ok(userRepository.findAllWithTeams());
     }
+
+    /** Unlinks every user from their team without deleting teams or picks. */
+    @PostMapping("/reset-teams")
+    public ResponseEntity<String> resetTeams() {
+        userRepository.findAll().forEach(u -> {
+            if (u.getTeam() != null) {
+                u.setTeam(null);
+                userRepository.save(u);
+            }
+        });
+        return ResponseEntity.ok("All team assignments cleared");
+    }
 }

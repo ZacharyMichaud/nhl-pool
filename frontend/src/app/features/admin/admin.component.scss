@@ -305,6 +305,11 @@ h3 {
   background: linear-gradient(135deg, var(--danger), #b91c1c) !important;
 }
 
+.warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: #1a0c00 !important;
+}
+
 @media (max-width: 480px) {
   .round-row {
     flex-wrap: wrap;

@@ -92,6 +92,10 @@ export class ApiService {
 
   createTeam(name: string): Observable<any> { return this.http.post(`${ API }/admin/teams`, { name }); }
 
+  deleteTeam(teamId: number): Observable<void> { return this.http.delete<void>(`${ API }/admin/teams/${ teamId }`); }
+
+  resetTeams(): Observable<any> { return this.http.post(`${ API }/admin/reset-teams`, {}); }
+
   assignMembers(teamId: number, userIds: number[]): Observable<any> {
     return this.http.put(`${ API }/admin/teams/${ teamId }/members`, { userIds });
   }
