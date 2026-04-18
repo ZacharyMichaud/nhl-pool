@@ -79,6 +79,17 @@ $tab-bar-height: 64px;
   animation: pulse 1s infinite;
 }
 
+.picks-away-badge {
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
 // ── Desktop layout ────────────────────────────────────────────────────────────
 .desktop-only {
   display: none;
@@ -908,4 +919,183 @@ $tab-bar-height: 64px;
 @keyframes sheet-slide-up {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
+}
+
+// ── Desktop Draft Confirm Dialog ──────────────────────────────────────────────
+.draft-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  animation: modal-fade-in 0.18s ease;
+}
+
+.draft-confirm-dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 32px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 195, 255, 0.08);
+  animation: confirm-pop-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes confirm-pop-in {
+  from { transform: scale(0.88); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.draft-confirm-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.draft-confirm-headshot {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-secondary);
+  border: 2px solid rgba(0, 195, 255, 0.25);
+  flex-shrink: 0;
+}
+
+.draft-confirm-identity { flex: 1; min-width: 0; }
+
+.draft-confirm-name {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.draft-confirm-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.draft-confirm-pos {
+  background: var(--accent-glow);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.draft-confirm-team { color: var(--text-secondary); font-size: 13px; }
+
+.draft-confirm-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.draft-confirm-stat {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 6px;
+  text-align: center;
+}
+
+.draft-confirm-stat-val {
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  &.highlight { color: var(--accent); font-size: 20px; }
+}
+
+.draft-confirm-stat-lbl {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-top: 4px;
+}
+
+.draft-confirm-prompt {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+
+.draft-confirm-secondary {
+  margin-bottom: 12px;
+}
+
+.draft-confirm-watchlist-btn {
+  width: 100%;
+  padding: 11px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover { background: rgba(255, 255, 255, 0.04); border-color: rgba(255,255,255,0.15); color: var(--text-primary); }
+
+  &.starred {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(251, 191, 36, 0.08);
+  }
+}
+
+.draft-confirm-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.draft-confirm-cancel {
+  flex: 1;
+  padding: 13px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover { background: rgba(255, 255, 255, 0.04); border-color: rgba(255,255,255,0.15); color: var(--text-primary); }
+}
+
+.draft-confirm-pick {
+  flex: 1.5;
+  padding: 13px;
+  font-size: 14px;
+  border-radius: 12px;
+  font-weight: 700;
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    filter: grayscale(0.4);
+  }
+}
+
+// ── Desktop row: show pointer + highlight when it's your turn ─────────────────
+.desktop-layout .player-row.my-turn-clickable {
+  cursor: pointer;
 }

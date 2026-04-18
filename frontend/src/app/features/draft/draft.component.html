@@ -7,6 +7,10 @@
       <span>Draft is live</span>
       <span class="pick-badge">Pick #{{ config()?.currentPickNumber }}</span>
       <span class="my-turn-badge" *ngIf="isMyTurn()">YOUR TURN</span>
+      <span class="picks-away-badge"
+            *ngIf="!isMyTurn() && auth.teamId() && picksUntilMyTurn() !== null">
+        {{ picksUntilMyTurn() === 1 ? '1 pick away' : picksUntilMyTurn() + ' picks away' }}
+      </span>
     </ng-container>
     <ng-container *ngIf="config()?.status === 'COMPLETED'">
       <span class="status-dot done-dot"></span>
@@ -208,7 +212,7 @@
         <div class="player-modal-identity">
           <div class="player-modal-name">{{ selectedPlayer().firstName }} {{ selectedPlayer().lastName }}</div>
           <div class="player-modal-meta">
-            <span class="player-modal-pos">{{ selectedPlayer().position }}</span>
+            <span class="player-modal-pos">{{ formatPosition(selectedPlayer().position) }}</span>
             <span class="player-modal-team">{{ selectedPlayer().teamAbbrev }}</span>
           </div>
         </div>
@@ -239,6 +243,49 @@
 </div>
 
 <!-- ════════════════════════════════
+     DESKTOP DRAFT CONFIRM DIALOG
+════════════════════════════════ -->
+<div class="draft-confirm-backdrop" *ngIf="draftConfirmPlayer()" (click)="closeDraftConfirm()">
+  <div class="draft-confirm-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+
+    <div class="draft-confirm-header">
+      <img [src]="draftConfirmPlayer().headshotUrl" class="draft-confirm-headshot"
+           loading="lazy" onerror="this.style.display='none'">
+      <div class="draft-confirm-identity">
+        <div class="draft-confirm-name">{{ draftConfirmPlayer().firstName }} {{ draftConfirmPlayer().lastName }}</div>
+        <div class="draft-confirm-meta">
+          <span class="draft-confirm-pos">{{ formatPosition(draftConfirmPlayer().position) }}</span>
+          <span class="draft-confirm-team">{{ draftConfirmPlayer().teamAbbrev }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="draft-confirm-stats">
+      <div class="draft-confirm-stat" *ngFor="let stat of getModalStats(draftConfirmPlayer())">
+        <div class="draft-confirm-stat-val" [class.highlight]="stat.key === 'pts'">{{ stat.val }}</div>
+        <div class="draft-confirm-stat-lbl">{{ stat.label }}</div>
+      </div>
+    </div>
+
+    <div class="draft-confirm-secondary" *ngIf="auth.teamId()">
+      <button class="draft-confirm-watchlist-btn"
+              [class.starred]="isWatchlisted(draftConfirmPlayer())"
+              (click)="toggleWatchlist(draftConfirmPlayer())">
+        {{ isWatchlisted(draftConfirmPlayer()) ? '⭐ Watchlisted' : '☆ Add to Watchlist' }}
+      </button>
+    </div>
+
+    <div class="draft-confirm-actions">
+      <button class="draft-confirm-cancel" (click)="closeDraftConfirm()">Cancel</button>
+      <button class="btn-primary draft-confirm-pick"
+              [disabled]="config()?.status !== 'IN_PROGRESS' || !isMyTurn()"
+              (click)="confirmAndDraft(draftConfirmPlayer())">🏒 Confirm Draft</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════
      SHARED TEMPLATES
 ════════════════════════════════ -->
 
@@ -264,7 +311,8 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let p of filteredPlayers()" class="player-row">
+        <tr *ngFor="let p of filteredPlayers()" class="player-row"
+            (click)="openDraftConfirm(p)">
           <td class="col-watch" *ngIf="auth.teamId()">
             <button class="star-btn" [class.starred]="isWatchlisted(p)"
                     (click)="$event.stopPropagation(); toggleWatchlist(p)"
@@ -278,7 +326,7 @@
               <span class="player-name">{{ p.firstName.charAt(0) }}. {{ p.lastName }}</span>
             </div>
           </td>
-          <td class="col-pos">{{ p.position }}</td>
+          <td class="col-pos">{{ formatPosition(p.position) }}</td>
           <td class="col-team">{{ p.teamAbbrev }}</td>
           <td class="col-stat">{{ getStat(p, 'gp') }}</td>
           <td class="col-stat">{{ getDisplayStat(p, 'g') }}</td>
@@ -289,7 +337,7 @@
           <td class="col-stat">{{ getDisplayStat(p, 'ppp') }}</td>
           <td class="col-stat" *ngIf="selectedSplit === 'full'">{{ p.regularSeasonAvgToi || '-' }}</td>
           <td class="col-action" *ngIf="config()?.status === 'IN_PROGRESS' && isMyTurn()">
-            <button class="btn-primary pick-btn" (click)="$event.stopPropagation(); draftPlayer(p)">Pick</button>
+            <button class="btn-primary pick-btn" (click)="$event.stopPropagation(); openDraftConfirm(p)">Pick</button>
           </td>
         </tr>
       </tbody>
@@ -307,7 +355,7 @@
       <img [src]="entry.player.headshotUrl" class="wl-headshot" loading="lazy" onerror="this.style.display='none'">
       <div class="wl-info">
         <span class="wl-name">{{ entry.player.firstName }} {{ entry.player.lastName }}</span>
-        <span class="wl-meta">{{ entry.player.position }} · {{ entry.player.teamAbbrev }}</span>
+        <span class="wl-meta">{{ formatPosition(entry.player.position) }} · {{ entry.player.teamAbbrev }}</span>
       </div>
       <div class="wl-actions">
         <button class="wl-btn" (click)="moveUp(i)" [disabled]="i === 0" title="Move up">↑</button>
@@ -327,7 +375,7 @@
       <span class="pick-player">{{ pick.player?.firstName }} {{ pick.player?.lastName }}</span>
       <span class="pick-team">{{ pick.team?.name }}</span>
     </div>
-    <span class="pick-pos">{{ pick.player?.position }}</span>
+    <span class="pick-pos">{{ formatPosition(pick.player?.position) }}</span>
   </div>
   <p *ngIf="filteredHistory().length === 0" class="empty">No picks yet</p>
 </ng-template>

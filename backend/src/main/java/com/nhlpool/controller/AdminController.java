@@ -25,6 +25,7 @@ public class AdminController {
     private final UserRepository userRepository;
     private final PoolRoundRepository poolRoundRepository;
     private final SeriesRepository seriesRepository;
+    private final DraftPickRepository draftPickRepository;
 
     @PostMapping("/sync/rosters")
     public ResponseEntity<String> syncRosters() {
@@ -88,6 +89,18 @@ public class AdminController {
             userRepository.save(user);
         });
         return ResponseEntity.ok(poolTeamRepository.findById(id).orElseThrow());
+    }
+
+    @DeleteMapping("/teams/{id}")
+    public ResponseEntity<Void> deleteTeam(@PathVariable Long id) {
+        // Unlink any users assigned to this team
+        userRepository.findAll().stream()
+                .filter(u -> u.getTeam() != null && u.getTeam().getId().equals(id))
+                .forEach(u -> { u.setTeam(null); userRepository.save(u); });
+        // Remove any draft picks for this team
+        draftPickRepository.deleteAll(draftPickRepository.findByTeamIdOrderByPickNumberAsc(id));
+        poolTeamRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
     // Round management

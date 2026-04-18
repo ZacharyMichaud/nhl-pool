@@ -3,7 +3,7 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { catchError, EMPTY } from 'rxjs';
+import { catchError, EMPTY, of } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
@@ -82,11 +82,18 @@ export class DraftComponent implements OnInit, OnDestroy {
 
   positionOptions: DropdownOption[] = [
     { value: '', label: 'All Positions' },
-    { value: 'C', label: 'Centre' },
-    { value: 'L', label: 'Left Wing' },
-    { value: 'R', label: 'Right Wing' },
-    { value: 'D', label: 'Defence' },
+    { value: 'C', label: 'C' },
+    { value: 'L', label: 'LW' },
+    { value: 'R', label: 'RW' },
+    { value: 'D', label: 'D' },
   ];
+
+  formatPosition(pos: string | null | undefined): string {
+    if (!pos) return '';
+    if (pos === 'L') return 'LW';
+    if (pos === 'R') return 'RW';
+    return pos;
+  }
 
   teamOptions = computed<DropdownOption[]>(() => [
     { value: '', label: 'All Teams' },
@@ -103,12 +110,16 @@ export class DraftComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     document.body.classList.add('draft-open'); // lock outer scroll on mobile for this page
-    this.loadPlayers();
-    this.loadBoard();
-    this.loadWatchlist();
-    this.api.getDraftConfig()
-      .pipe(catchError(() => EMPTY))
-      .subscribe((c) => this.config.set(c));
+
+    // Refresh teamId in case it was assigned by admin after the user last logged in
+    this.auth.refreshProfile().pipe(catchError(() => of(null))).subscribe(() => {
+      this.loadPlayers();
+      this.loadBoard();
+      this.loadWatchlist();
+      this.api.getDraftConfig()
+        .pipe(catchError(() => EMPTY))
+        .subscribe((c) => this.config.set(c));
+    });
 
     this.pollInterval = setInterval(() => {
       this.loadBoard();
@@ -251,11 +262,46 @@ export class DraftComponent implements OnInit, OnDestroy {
       });
   }
 
+  private getTeamForPick(order: number[], pickNumber: number): number {
+    const numTeams = order.length;
+    const zeroBased = pickNumber - 1;
+    const round = Math.floor(zeroBased / numTeams);
+    const posInRound = zeroBased % numTeams;
+    return round % 2 === 0
+      ? order[posInRound]
+      : order[numTeams - 1 - posInRound];
+  }
+
   isMyTurn(): boolean {
     const cfg = this.config();
     if (!cfg || cfg.status !== 'IN_PROGRESS') return false;
-    return this.auth.teamId() != null;
+    const myTeamId = this.auth.teamId();
+    if (myTeamId == null || !cfg.draftOrder) return false;
+
+    const order: number[] = (cfg.draftOrder as string)
+      .split(',')
+      .map((s: string) => Number(s.trim()));
+    return this.getTeamForPick(order, cfg.currentPickNumber) === myTeamId;
   }
+
+  /** Returns how many picks until it's the user's turn, or null if not applicable. */
+  picksUntilMyTurn = computed<number | null>(() => {
+    const cfg = this.config();
+    if (!cfg || cfg.status !== 'IN_PROGRESS') return null;
+    const myTeamId = this.auth.teamId();
+    if (myTeamId == null || !cfg.draftOrder) return null;
+
+    const order: number[] = (cfg.draftOrder as string)
+      .split(',')
+      .map((s: string) => Number(s.trim()));
+
+    // Walk forward until we find a pick that belongs to our team
+    for (let offset = 0; offset < order.length * 2; offset++) {
+      const teamId = this.getTeamForPick(order, cfg.currentPickNumber + offset);
+      if (teamId === myTeamId) return offset;
+    }
+    return null;
+  });
 
   draftPlayer(player: any) {
     if (this.config()?.status !== 'IN_PROGRESS') return;
@@ -342,6 +388,23 @@ export class DraftComponent implements OnInit, OnDestroy {
 
   closePlayerModal() {
     this.selectedPlayer.set(null);
+  }
+
+  // ── Desktop draft-confirm dialog ──
+
+  draftConfirmPlayer = signal<any>(null);
+
+  openDraftConfirm(player: any) {
+    this.draftConfirmPlayer.set(player);
+  }
+
+  closeDraftConfirm() {
+    this.draftConfirmPlayer.set(null);
+  }
+
+  confirmAndDraft(player: any) {
+    this.closeDraftConfirm();
+    this.draftPlayer(player);
   }
 
   getModalStats(p: any): { key: string; label: string; val: string }[] {

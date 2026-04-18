@@ -47,6 +47,13 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
+  /** Re-syncs teamId and other profile data without requiring a full re-login. */
+  refreshProfile() {
+    return this.http.get<AuthResponse>(`${this.API}/me`).pipe(
+      tap(res => this.storeUser(res))
+    );
+  }
+
   getToken(): string | null {
     return this._user()?.token ?? null;
   }

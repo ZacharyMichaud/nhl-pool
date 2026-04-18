@@ -58,4 +58,14 @@ public class AuthService {
         return new AuthResponse(token, user.getId(), user.getUsername(), user.getDisplayName(),
                 user.getRole().name(), user.getTeam() != null ? user.getTeam().getId() : null);
     }
+
+    /** Returns a fresh AuthResponse for an already-authenticated user (used by /me endpoint). */
+    public AuthResponse getMe(User user) {
+        // Re-fetch from DB to get up-to-date team assignment
+        User fresh = userRepository.findByUsername(user.getUsername())
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+        String token = jwtUtil.generateToken(fresh.getUsername(), fresh.getRole().name());
+        return new AuthResponse(token, fresh.getId(), fresh.getUsername(), fresh.getDisplayName(),
+                fresh.getRole().name(), fresh.getTeam() != null ? fresh.getTeam().getId() : null);
+    }
 }

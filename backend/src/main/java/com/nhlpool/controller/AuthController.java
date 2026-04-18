@@ -1,11 +1,13 @@
 package com.nhlpool.controller;
 
+import com.nhlpool.domain.User;
 import com.nhlpool.service.AuthService;
 import com.nhlpool.service.AuthService.AuthResponse;
 import com.nhlpool.service.AuthService.LoginRequest;
 import com.nhlpool.service.AuthService.RegisterRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,5 +25,13 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<AuthResponse> me(@AuthenticationPrincipal User user) {
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(authService.getMe(user));
     }
 }
