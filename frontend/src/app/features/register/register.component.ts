@@ -21,14 +21,14 @@ export class RegisterComponent {
   username = '';
   displayName = '';
   password = '';
-  adminSecret = '';
+
   error = '';
   loading = false;
 
   register() {
     this.loading = true;
     this.error = '';
-    this.auth.register(this.username, this.password, this.displayName, this.adminSecret || undefined).subscribe({
+    this.auth.register(this.username, this.password, this.displayName).subscribe({
       next: () => this.router.navigate(['/']),
       error: (err) => {
         this.error = err.error?.error || 'Registration failed';

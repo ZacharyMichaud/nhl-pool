@@ -44,6 +44,10 @@ public class DraftService {
         }
         if (draftOrder != null) {
             config.setDraftOrder(draftOrder);
+            // Keep totalTeams in sync with the draft order
+            long teamCount = Arrays.stream(draftOrder.split(","))
+                    .filter(s -> !s.isBlank()).count();
+            config.setTotalTeams((int) teamCount);
         }
         return draftConfigRepository.save(config);
     }

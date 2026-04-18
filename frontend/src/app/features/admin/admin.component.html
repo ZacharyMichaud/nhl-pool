@@ -56,19 +56,32 @@
         </mat-form-field>
         <button class="btn-primary" (click)="createTeam()">Create</button>
       </div>
-      <div *ngFor="let team of teams()" class="team-row">
-        <strong>{{ team.name }}</strong> (ID: {{ team.id }})
-        <span class="member-list">{{ getMemberNames(team) }}</span>
+      <div class="team-list">
+        <div *ngFor="let team of teams()" class="team-row">
+          <div class="team-avatar">{{ team.name.charAt(0).toUpperCase() }}</div>
+          <div class="team-info">
+            <span class="team-name">{{ team.name }}</span>
+            <span class="member-list">{{ getMemberNames(team) || 'No members yet' }}</span>
+          </div>
+          <span class="team-id-chip">#{{ team.id }}</span>
+        </div>
       </div>
     </div>
 
     <!-- Users -->
     <div class="card">
       <h2>👤 Registered Users</h2>
-      <div *ngFor="let u of users()" class="user-row">
-        <span>{{ u.displayName }} ({{ u.username }})</span>
-        <span class="role-badge" [class.admin]="u.role === 'ADMIN'">{{ u.role }}</span>
-        <span>Team: {{ u.team?.name || 'None' }}</span>
+      <div class="user-list">
+        <div *ngFor="let u of users()" class="user-row">
+          <div class="user-info">
+            <span class="user-display-name">{{ u.displayName }}</span>
+            <span class="user-username">{{ '@' + u.username }}</span>
+          </div>
+          <div class="user-meta">
+            <span class="team-chip">{{ u.team?.name || 'No team' }}</span>
+            <span class="role-badge" [class.admin]="u.role === 'ADMIN'">{{ u.role }}</span>
+          </div>
+        </div>
       </div>
 
       <h3>Assign users to team</h3>
@@ -95,14 +108,16 @@
     <!-- Rounds -->
     <div class="card">
       <h2>🏒 Rounds</h2>
-      <div *ngFor="let r of rounds()" class="round-row">
-        <span>{{ r.label }}</span>
-        <div class="status-select">
-          <app-dropdown
-            [options]="roundStatusOptions"
-            [value]="r.status"
-            (valueChange)="onRoundStatusChange(r, $event)">
-          </app-dropdown>
+      <div class="round-list">
+        <div *ngFor="let r of rounds()" class="round-row">
+          <span>{{ r.label }}</span>
+          <div class="status-select">
+            <app-dropdown
+              [options]="roundStatusOptions"
+              [value]="r.status"
+              (valueChange)="onRoundStatusChange(r, $event)">
+            </app-dropdown>
+          </div>
         </div>
       </div>
     </div>
@@ -110,14 +125,16 @@
     <!-- Scoring Rules -->
     <div class="card">
       <h2>📊 Player Scoring Rules</h2>
-      <div *ngFor="let rule of scoringRules()" class="rule-row">
-        <span class="rule-name">{{ rule.statName }}</span>
-        <input type="number" class="rule-input" [(ngModel)]="rule.pointValue"
-               (change)="updateScoringRule(rule)">
-        <label class="rule-toggle">
-          <input type="checkbox" [(ngModel)]="rule.enabled" (change)="updateScoringRule(rule)">
-          {{ rule.enabled ? 'On' : 'Off' }}
-        </label>
+      <div class="rule-list">
+        <div *ngFor="let rule of scoringRules()" class="rule-row">
+          <span class="rule-name">{{ rule.statName }}</span>
+          <input type="number" class="rule-input" [(ngModel)]="rule.pointValue"
+                 (change)="updateScoringRule(rule)">
+          <label class="rule-toggle">
+            <input type="checkbox" [(ngModel)]="rule.enabled" (change)="updateScoringRule(rule)">
+            {{ rule.enabled ? 'On' : 'Off' }}
+          </label>
+        </div>
       </div>
     </div>
 

@@ -14,46 +14,76 @@
 
   <div class="series-grid">
     <div *ngFor="let s of series()" class="series-card card">
+
+      <!-- Series Status Banner -->
+      <div class="series-status" [class.locked]="s.winnerAbbrev">
+        <span class="status-dot" [class.active]="!s.winnerAbbrev"></span>
+        {{ s.winnerAbbrev ? 'Series Complete' : 'In Progress' }}
+      </div>
+
+      <!-- Matchup -->
       <div class="matchup">
-        <div class="team-side" [class.winner]="s.winnerAbbrev === s.topSeedAbbrev">
+        <div class="team-side" [class.winner]="s.winnerAbbrev === s.topSeedAbbrev" [class.loser]="s.winnerAbbrev && s.winnerAbbrev !== s.topSeedAbbrev">
           <img [src]="s.topSeedLogoUrl" class="team-logo" onerror="this.style.display='none'">
           <span class="team-abbrev">{{ s.topSeedAbbrev }}</span>
           <span class="team-wins">{{ s.topSeedWins }}</span>
         </div>
-        <span class="vs">vs</span>
-        <div class="team-side" [class.winner]="s.winnerAbbrev === s.bottomSeedAbbrev">
+
+        <div class="vs-block">
+          <span class="vs">VS</span>
+          <span class="series-label">Best of 7</span>
+        </div>
+
+        <div class="team-side" [class.winner]="s.winnerAbbrev === s.bottomSeedAbbrev" [class.loser]="s.winnerAbbrev && s.winnerAbbrev !== s.bottomSeedAbbrev">
           <img [src]="s.bottomSeedLogoUrl" class="team-logo" onerror="this.style.display='none'">
           <span class="team-abbrev">{{ s.bottomSeedAbbrev }}</span>
           <span class="team-wins">{{ s.bottomSeedWins }}</span>
         </div>
       </div>
 
+      <!-- Winner badge -->
+      <div class="winner-banner" *ngIf="s.winnerAbbrev">
+        <span class="trophy-icon">🏆</span>
+        <span>{{ s.winnerAbbrev }} wins</span>
+      </div>
+
+      <!-- Prediction Form -->
       <div class="prediction-form">
-        <mat-form-field appearance="outline" class="pred-field">
-          <mat-label>Winner</mat-label>
-          <mat-select [(ngModel)]="predictions()[s.id]!.winner" [disabled]="!!s.winnerAbbrev">
-            <mat-option [value]="s.topSeedAbbrev">{{ s.topSeedAbbrev }}</mat-option>
-            <mat-option [value]="s.bottomSeedAbbrev">{{ s.bottomSeedAbbrev }}</mat-option>
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="pred-field">
-          <mat-label>Games</mat-label>
-          <mat-select [(ngModel)]="predictions()[s.id]!.games" [disabled]="!!s.winnerAbbrev">
-            <mat-option [value]="4">4</mat-option>
-            <mat-option [value]="5">5</mat-option>
-            <mat-option [value]="6">6</mat-option>
-            <mat-option [value]="7">7</mat-option>
-          </mat-select>
-        </mat-form-field>
-        <button class="btn-primary" (click)="submitPrediction(s)"
-                [disabled]="!predictions()[s.id].winner || s.winnerAbbrev">
-          {{ s.winnerAbbrev ? 'Locked' : 'Save' }}
+        <div class="pred-field-group">
+          <label class="pred-label">Pick Winner</label>
+          <app-dropdown
+            [options]="getWinnerOptions(s)"
+            [value]="predictions()[s.id]?.winner"
+            (valueChange)="onWinnerChange(s.id, $event)"
+            placeholder="Choose team…"
+            [disabled]="!!s.winnerAbbrev">
+          </app-dropdown>
+        </div>
+
+        <div class="pred-field-group">
+          <label class="pred-label">Games</label>
+          <app-dropdown
+            [options]="gameOptions"
+            [value]="predictions()[s.id]?.games"
+            (valueChange)="onGamesChange(s.id, $event)"
+            placeholder="# of games"
+            [disabled]="!!s.winnerAbbrev">
+          </app-dropdown>
+        </div>
+
+        <button class="btn-save"
+                (click)="submitPrediction(s)"
+                [disabled]="!predictions()[s.id]?.winner || !!s.winnerAbbrev">
+          <span *ngIf="s.winnerAbbrev">🔒 Locked</span>
+          <span *ngIf="!s.winnerAbbrev">Save</span>
         </button>
       </div>
     </div>
 
-    <div *ngIf="series().length === 0" class="card">
-      <p class="empty">No series data for this round yet. Ask the admin to sync series.</p>
+    <div *ngIf="series().length === 0" class="card empty-state">
+      <div class="empty-icon">📊</div>
+      <p class="empty-title">No series data yet</p>
+      <p class="empty-sub">Ask an admin to sync the series for this round.</p>
     </div>
   </div>
 </div>

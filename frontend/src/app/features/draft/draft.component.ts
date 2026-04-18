@@ -2,9 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { catchError, EMPTY } from 'rxjs';
 import { ApiService } from '../../core/api.service';
@@ -19,7 +16,7 @@ type MobileTab = 'players' | 'watchlist' | 'history';
 @Component({
   selector: 'app-draft',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatSnackBarModule, DropdownComponent],
+  imports: [CommonModule, FormsModule, MatButtonModule, MatSnackBarModule, DropdownComponent],
   templateUrl: './draft.component.html',
   styleUrl: './draft.component.scss'
 })

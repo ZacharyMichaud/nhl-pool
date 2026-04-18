@@ -18,10 +18,6 @@
     </ng-container>
   </div>
 
-  <!-- ── Page Title (desktop only) ── -->
-  <div class="page-header desktop-only">
-    <h1>Draft Board</h1>
-  </div>
 
   <!-- ════════════════════════════════
        DESKTOP LAYOUT (≥ 900px)
@@ -32,27 +28,22 @@
     <div class="card players-panel">
       <h2>Available Players</h2>
       <div class="filters">
-        <mat-form-field appearance="outline" class="filter-field">
-          <mat-label>Search</mat-label>
-          <input matInput [(ngModel)]="searchQuery" (ngModelChange)="filterPlayers()" placeholder="Player name...">
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="filter-field">
-          <mat-label>Team</mat-label>
-          <mat-select [(ngModel)]="selectedTeam" (ngModelChange)="loadPlayers()">
-            <mat-option value="">All Teams</mat-option>
-            <mat-option *ngFor="let t of teams()" [value]="t">{{ t }}</mat-option>
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="filter-field">
-          <mat-label>Position</mat-label>
-          <mat-select [(ngModel)]="selectedPosition" (ngModelChange)="loadPlayers()">
-            <mat-option value="">All</mat-option>
-            <mat-option value="C">C</mat-option>
-            <mat-option value="L">LW</mat-option>
-            <mat-option value="R">RW</mat-option>
-            <mat-option value="D">D</mat-option>
-          </mat-select>
-        </mat-form-field>
+        <div class="desktop-search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="desktop-search-input" [(ngModel)]="searchQuery" (ngModelChange)="filterPlayers()" placeholder="Search player...">
+        </div>
+        <app-dropdown
+          class="desktop-filter-dropdown"
+          [options]="positionOptions"
+          [value]="selectedPosition"
+          (valueChange)="selectedPosition = $event; loadPlayers()">
+        </app-dropdown>
+        <app-dropdown
+          class="desktop-filter-dropdown"
+          [options]="teamOptions()"
+          [value]="selectedTeam"
+          (valueChange)="selectedTeam = $event; loadPlayers()">
+        </app-dropdown>
       </div>
       <div class="toggle-row">
         <div class="toggle-group">
@@ -82,7 +73,9 @@
             (valueChange)="setHistoryTeam($event)">
           </app-dropdown>
         </div>
-        <ng-container *ngTemplateOutlet="historyContent"></ng-container>
+        <div class="history-pick-list">
+          <ng-container *ngTemplateOutlet="historyContent"></ng-container>
+        </div>
       </div>
     </div>
 
@@ -169,7 +162,7 @@
     </div>
 
     <!-- Watchlist Tab -->
-    <div class="mobile-panel" [class.active]="activeTab() === 'watchlist'">
+    <div class="mobile-panel scrollable-panel" [class.active]="activeTab() === 'watchlist'">
       <div class="mobile-panel-header">
         <h2>My Watchlist</h2>
         <span class="watchlist-count" *ngIf="watchlist().length > 0">{{ watchlist().length }}</span>
@@ -178,7 +171,7 @@
     </div>
 
     <!-- History Tab -->
-    <div class="mobile-panel" [class.active]="activeTab() === 'history'">
+    <div class="mobile-panel scrollable-panel" [class.active]="activeTab() === 'history'">
       <div class="mobile-panel-header">
         <h2>Draft History</h2>
         <app-dropdown
@@ -188,9 +181,7 @@
           (valueChange)="setHistoryTeam($event)">
         </app-dropdown>
       </div>
-      <div class="mobile-history-scroll">
-        <ng-container *ngTemplateOutlet="historyContent"></ng-container>
-      </div>
+      <ng-container *ngTemplateOutlet="historyContent"></ng-container>
     </div>
 
   </div>

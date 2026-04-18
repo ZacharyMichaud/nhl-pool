@@ -51,25 +51,150 @@ h3 {
   }
 }
 
+.team-list {
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+
+  // Subtle scrollbar styling
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+}
+
 .team-row {
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--bg-secondary);
+  }
+}
+
+.team-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), hsl(220, 80%, 65%));
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.team-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.team-name {
+  font-weight: 600;
   font-size: 14px;
+  color: var(--text-primary);
+}
+
+.team-id-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .member-list {
   color: var(--text-secondary);
   font-size: 12px;
-  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 }
 
 .user-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  font-size: 13px;
-  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--bg-secondary);
+  }
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, hsl(270, 70%, 60%), hsl(220, 80%, 65%));
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-display-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.user-username {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.user-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.team-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(99, 179, 237, 0.12);
+  color: hsl(210, 80%, 65%);
+  border: 1px solid rgba(99, 179, 237, 0.25);
+  white-space: nowrap;
 }
 
 .role-badge {
@@ -86,6 +211,15 @@ h3 {
   }
 }
 
+.round-list {
+  max-height: 240px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+}
+
 .round-row {
   display: flex;
   align-items: center;
@@ -95,6 +229,15 @@ h3 {
 
 .status-select {
   width: 160px;
+}
+
+.rule-list {
+  max-height: 280px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 }
 
 .rule-row {
@@ -129,6 +272,7 @@ h3 {
   color: var(--text-secondary);
   cursor: pointer;
 }
+
 
 .pred-rule-row {
   display: flex;
@@ -180,5 +324,18 @@ h3 {
 
   .user-row {
     flex-wrap: wrap;
+  }
+
+  .user-meta {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  // Slightly reduce max-height on small screens
+  .team-list,
+  .user-list,
+  .round-list,
+  .rule-list {
+    max-height: 160px;
   }
 }

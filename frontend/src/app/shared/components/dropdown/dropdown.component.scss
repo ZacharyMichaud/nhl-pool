@@ -1,6 +1,14 @@
 :host {
   display: block;
   position: relative;
+
+  &.disabled {
+    .dropdown-trigger {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+  }
 }
 
 .custom-dropdown {

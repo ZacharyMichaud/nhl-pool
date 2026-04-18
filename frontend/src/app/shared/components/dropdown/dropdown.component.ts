@@ -2,6 +2,7 @@ import {
   Component,
   ElementRef,
   EventEmitter,
+  HostBinding,
   Input,
   OnDestroy,
   OnInit,
@@ -23,6 +24,9 @@ export class DropdownComponent implements OnInit, OnDestroy {
   @Output() valueChange = new EventEmitter<any>();
   @Input() placeholder = 'Select…';
   @Input() multiple = false;    // enable multi-select mode
+  @Input() disabled = false;    // disable interaction
+
+  @HostBinding('class.disabled') get isDisabled() { return this.disabled; }
 
   open = false;
 
@@ -68,15 +72,52 @@ export class DropdownComponent implements OnInit, OnDestroy {
     }
   };
 
+  /** Recalculate panel position — called on open, scroll, and resize */
+  private repositionPanel() {
+    const trigger = this.el.nativeElement.querySelector('.dropdown-trigger') as HTMLElement;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const panelHeight = Math.min(this.options.length * 44 + 8, 300);
+    if (spaceBelow >= panelHeight || spaceBelow >= 120) {
+      this.panelStyle = {
+        position: 'fixed',
+        top: rect.bottom + 5 + 'px',
+        left: rect.left + 'px',
+        width: rect.width + 'px',
+        zIndex: '9999',
+      };
+    } else {
+      this.panelStyle = {
+        position: 'fixed',
+        bottom: (window.innerHeight - rect.top + 5) + 'px',
+        left: rect.left + 'px',
+        width: rect.width + 'px',
+        zIndex: '9999',
+      };
+    }
+  }
+
+  private scrollResizeHandler = () => {
+    if (this.open) {
+      this.repositionPanel();
+    }
+  };
+
   ngOnInit() {
     document.addEventListener('click', this.outsideClickHandler, true);
+    window.addEventListener('scroll', this.scrollResizeHandler, true);
+    window.addEventListener('resize', this.scrollResizeHandler);
   }
 
   ngOnDestroy() {
     document.removeEventListener('click', this.outsideClickHandler, true);
+    window.removeEventListener('scroll', this.scrollResizeHandler, true);
+    window.removeEventListener('resize', this.scrollResizeHandler);
   }
 
   select(option: DropdownOption) {
+    if (this.disabled) return;
     if (this.multiple) {
       const arr = [...this.selectedValues];
       const idx = arr.indexOf(option.value);
@@ -93,30 +134,9 @@ export class DropdownComponent implements OnInit, OnDestroy {
   }
 
   toggle() {
+    if (this.disabled) return;
     if (!this.open) {
-      const trigger = this.el.nativeElement.querySelector('.dropdown-trigger') as HTMLElement;
-      if (trigger) {
-        const rect = trigger.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const panelHeight = Math.min(this.options.length * 44 + 8, 300);
-        if (spaceBelow >= panelHeight || spaceBelow >= 120) {
-          this.panelStyle = {
-            position: 'fixed',
-            top: rect.bottom + 5 + 'px',
-            left: rect.left + 'px',
-            width: rect.width + 'px',
-            zIndex: '9999',
-          };
-        } else {
-          this.panelStyle = {
-            position: 'fixed',
-            bottom: (window.innerHeight - rect.top + 5) + 'px',
-            left: rect.left + 'px',
-            width: rect.width + 'px',
-            zIndex: '9999',
-          };
-        }
-      }
+      this.repositionPanel();
     }
     this.open = !this.open;
   }

@@ -23,6 +23,7 @@ public class PoolTeam {
     @Column(nullable = false)
     private String name;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY)
     @Builder.Default
     private List<User> members = new ArrayList<>();

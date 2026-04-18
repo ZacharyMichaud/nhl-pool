@@ -14,9 +14,10 @@ $tab-bar-height: 64px;
     padding-bottom: $tab-bar-height; // reserve space for fixed tab bar
   }
 
-  // Desktop: natural document flow
+  // Desktop: fixed viewport height so children can fill remaining space via flex
   @media (min-width: $mobile) {
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     padding-bottom: 0;
   }
 }
@@ -91,10 +92,14 @@ $tab-bar-height: 64px;
     display: grid;
     grid-template-columns: 2.5fr 1fr;
     gap: 24px;
-    align-items: start;
+    align-items: stretch;
     padding: 24px;
     max-width: 1400px;
     margin: 0 auto;
+    flex: 1;          // fill remaining height below status bar
+    overflow: hidden; // clip — children handle their own scroll
+    width: 100%;
+    box-sizing: border-box;
   }
 }
 
@@ -102,6 +107,8 @@ $tab-bar-height: 64px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 0; // required for flex children to scroll correctly
+  overflow: hidden;
 }
 
 // ── Mobile layout ─────────────────────────────────────────────────────────────
@@ -123,6 +130,12 @@ $tab-bar-height: 64px;
   overflow: hidden; // clip — only .mobile-table-wrapper scrolls
 
   &.active { display: flex; }
+
+  // Watchlist + history tabs scroll their own content
+  &.scrollable-panel {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .mobile-panel-header {
@@ -424,13 +437,59 @@ $tab-bar-height: 64px;
 }
 
 // ── Desktop Player Table ──────────────────────────────────────────────────────
+// Make the left card a flex column so the table wrapper fills the available height
+.players-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; // clip — inner wrapper scrolls
+  min-height: 0;
+
+  // Keep heading, filters and toggles pinned; table wrapper fills the rest
+  & > h2 { flex-shrink: 0; }
+  .toggle-row { flex-shrink: 0; }
+}
+
 .filters {
   display: flex;
   gap: 8px;
+  align-items: center;
   flex-wrap: wrap;
+  flex-shrink: 0;
+  margin-bottom: 12px;
 }
 
 .filter-field { flex: 1; min-width: 120px; }
+
+// Desktop search input (replaces mat-form-field search)
+.desktop-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 180px;
+  min-width: 140px;
+}
+
+.desktop-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 32px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+
+  &:focus { border-color: rgba(0, 195, 255, 0.4); }
+  &::placeholder { color: var(--text-muted); }
+}
+
+.desktop-filter-dropdown {
+  flex: 0 0 auto;
+  min-width: 140px;
+}
 
 .toggle-row {
   display: flex;
@@ -464,9 +523,10 @@ $tab-bar-height: 64px;
 }
 
 .stats-table-wrapper {
-  max-height: 65vh;
+  flex: 1;          // fill remaining card height
   overflow-y: auto;
   overflow-x: auto;
+  min-height: 0;    // allow flex shrinking
 }
 
 .stats-table {
@@ -540,10 +600,17 @@ $tab-bar-height: 64px;
 }
 
 // ── Watchlist Panel ───────────────────────────────────────────────────────────
-.watchlist-panel { overflow: hidden; }
+.watchlist-panel {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 55%;   // takes ~55% of the right column
+  min-height: 0;   // required for flex children to scroll correctly
+}
 
 .watchlist-header {
   display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  flex-shrink: 0;
   h2 { margin: 0; }
 }
 
@@ -563,7 +630,14 @@ $tab-bar-height: 64px;
 
 .watchlist-empty { font-size: 13px; margin: 0; }
 
-.watchlist-list { display: flex; flex-direction: column; gap: 6px; }
+.watchlist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 2px; // prevent scrollbar from clipping content
+}
 
 .watchlist-item {
   display: flex;
@@ -625,7 +699,24 @@ $tab-bar-height: 64px;
 }
 
 // ── History Panel ─────────────────────────────────────────────────────────────
-.history-panel { max-height: 60vh; overflow-y: auto; }
+.history-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1 1 45%;   // takes ~45% of the right column
+  min-height: 0;   // required for flex children to scroll correctly
+
+  // On desktop the pick rows scroll inside the panel; header stays pinned
+  .pick-row { flex-shrink: 0; }
+}
+
+// Scrollable pick list inside the history panel (desktop)
+.history-pick-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 2px; // prevent scrollbar clipping
+}
 
 .history-header {
   display: flex;
@@ -633,6 +724,7 @@ $tab-bar-height: 64px;
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 12px;
+  flex-shrink: 0;  // keep header pinned
 
   h2 { margin: 0; font-size: 15px; font-weight: 700; white-space: nowrap; }
 }
