@@ -91,6 +91,18 @@ public class AdminController {
         return ResponseEntity.ok(poolTeamRepository.findById(id).orElseThrow());
     }
 
+    @PatchMapping("/teams/{id}")
+    public ResponseEntity<PoolTeam> renameTeam(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        PoolTeam team = poolTeamRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Team not found"));
+        String newName = body.get("name");
+        if (newName == null || newName.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        team.setName(newName.trim());
+        return ResponseEntity.ok(poolTeamRepository.save(team));
+    }
+
     @DeleteMapping("/teams/{id}")
     public ResponseEntity<Void> deleteTeam(@PathVariable Long id) {
         // Unlink any users assigned to this team
@@ -176,6 +188,16 @@ public class AdminController {
     @GetMapping("/users")
     public ResponseEntity<List<User>> getUsers() {
         return ResponseEntity.ok(userRepository.findAllWithTeams());
+    }
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setTeam(null);
+        userRepository.save(user);
+        userRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
     /** Unlinks every user from their team without deleting teams or picks. */

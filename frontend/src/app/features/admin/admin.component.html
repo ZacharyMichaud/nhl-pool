@@ -61,13 +61,33 @@
       <div class="team-list">
         <div *ngFor="let team of teams()" class="team-row">
           <div class="team-avatar">{{ team.name.charAt(0).toUpperCase() }}</div>
-          <div class="team-info">
+
+          <!-- Normal view -->
+          <div class="team-info" *ngIf="editingTeamId !== team.id">
             <span class="team-name">{{ team.name }}</span>
             <span class="member-list">{{ getMemberNames(team) || 'No members yet' }}</span>
           </div>
+
+          <!-- Rename input -->
+          <div class="team-rename-input" *ngIf="editingTeamId === team.id">
+            <input
+              class="rename-input"
+              [(ngModel)]="editingTeamName"
+              (keyup.enter)="saveRename(team)"
+              (keyup.escape)="cancelRename()"
+              autofocus>
+            <button class="btn-rename-action save" (click)="saveRename(team)" title="Save">✓</button>
+            <button class="btn-rename-action cancel" (click)="cancelRename()" title="Cancel">✕</button>
+          </div>
+
           <span class="team-id-chip">#{{ team.id }}</span>
+          <button class="btn-rename-team" (click)="startRename(team)" title="Rename team"
+                  *ngIf="editingTeamId !== team.id">✏️</button>
+          <button class="btn-delete-team" (click)="deleteTeam(team)" title="Delete team"
+                  *ngIf="editingTeamId !== team.id">🗑</button>
         </div>
       </div>
+
     </div>
 
     <!-- Users -->
@@ -83,6 +103,7 @@
             <span class="team-chip">{{ u.team?.name || 'No team' }}</span>
             <span class="role-badge" [class.admin]="u.role === 'ADMIN'">{{ u.role }}</span>
           </div>
+          <button class="btn-delete-team" (click)="deleteUser(u)" title="Delete user">🗑</button>
         </div>
       </div>
 

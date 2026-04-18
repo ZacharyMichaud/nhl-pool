@@ -92,6 +92,8 @@ export class ApiService {
 
   createTeam(name: string): Observable<any> { return this.http.post(`${ API }/admin/teams`, { name }); }
 
+  renameTeam(teamId: number, name: string): Observable<any> { return this.http.patch(`${ API }/admin/teams/${ teamId }`, { name }); }
+
   deleteTeam(teamId: number): Observable<void> { return this.http.delete<void>(`${ API }/admin/teams/${ teamId }`); }
 
   resetTeams(): Observable<any> { return this.http.post(`${ API }/admin/reset-teams`, {}); }
@@ -101,6 +103,8 @@ export class ApiService {
   }
 
   getUsers(): Observable<any[]> { return this.http.get<any[]>(`${ API }/admin/users`); }
+
+  deleteUser(userId: number): Observable<void> { return this.http.delete<void>(`${ API }/admin/users/${ userId }`); }
 
   getRounds(): Observable<any[]> { return this.http.get<any[]>(`${ API }/admin/rounds`); }
 

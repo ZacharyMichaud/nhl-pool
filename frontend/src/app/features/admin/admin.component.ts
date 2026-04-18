@@ -36,6 +36,10 @@ export class AdminComponent implements OnInit, OnDestroy {
   assignTeamId: number | null = null;
   assignUserIds: number[] = [];
 
+  // Inline rename state
+  editingTeamId: number | null = null;
+  editingTeamName = '';
+
   // ── Dropdown option lists ────────────────────────────────────────────────────
 
   teamDropdownOptions = computed<DropdownOption[]>(() =>
@@ -145,11 +149,46 @@ export class AdminComponent implements OnInit, OnDestroy {
     });
   }
 
+  startRename(team: any) {
+    this.editingTeamId = team.id;
+    this.editingTeamName = team.name;
+  }
+
+  cancelRename() {
+    this.editingTeamId = null;
+    this.editingTeamName = '';
+  }
+
+  saveRename(team: any) {
+    const name = this.editingTeamName.trim();
+    if (!name || name === team.name) { this.cancelRename(); return; }
+    this.api.renameTeam(team.id, name).subscribe({
+      next: () => { this.show('Team renamed!'); this.cancelRename(); this.loadAll(); },
+      error: (e) => this.show(e.error?.error || 'Failed'),
+    });
+  }
+
+  deleteTeam(team: any) {
+    if (!confirm(`Delete team "${team.name}"? This will unlink all members and remove their draft picks.`)) return;
+    this.api.deleteTeam(team.id).subscribe({
+      next: () => { this.show(`Team "${team.name}" deleted.`); this.loadAll(); },
+      error: (e) => this.show(e.error?.error || 'Failed to delete team'),
+    });
+  }
+
   assignMembers() {
     if (this.assignTeamId == null || this.assignUserIds.length === 0) return;
     this.api.assignMembers(this.assignTeamId, this.assignUserIds).subscribe({
       next: () => { this.show('Members assigned!'); this.assignTeamId = null; this.assignUserIds = []; this.loadAll(); },
       error: (e) => this.show(e.error?.error || 'Failed'),
+    });
+  }
+
+  deleteUser(user: any) {
+    if (!confirm(`Delete user "${user.displayName}" (@${user.username})? This cannot be undone.`)) return;
+    this.api.deleteUser(user.id).subscribe({
+      next: () => { this.show(`User "${user.displayName}" deleted.`); this.loadAll(); },
+      error: (e) => this.show(e.error?.error || 'Failed to delete user'),
     });
   }
 

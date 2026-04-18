@@ -114,6 +114,92 @@ h3 {
   flex-shrink: 0;
 }
 
+.btn-delete-team {
+  all: unset;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.15);
+  }
+
+  .team-row:hover &,
+  .user-row:hover & {
+    opacity: 1;
+  }
+}
+
+.btn-rename-team {
+  all: unset;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(99, 179, 237, 0.15);
+  }
+
+  .team-row:hover & {
+    opacity: 1;
+  }
+}
+
+.team-rename-input {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.2);
+}
+
+.btn-rename-action {
+  all: unset;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+
+  &.save {
+    color: hsl(142, 70%, 50%);
+    &:hover { background: rgba(52, 211, 153, 0.15); }
+  }
+
+  &.cancel {
+    color: var(--text-muted);
+    &:hover { background: var(--bg-secondary); }
+  }
+}
+
 .member-list {
   color: var(--text-secondary);
   font-size: 12px;
