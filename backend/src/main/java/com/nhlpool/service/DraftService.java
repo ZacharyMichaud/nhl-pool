@@ -15,6 +15,7 @@ import com.nhlpool.repository.PlayerRepository;
 import com.nhlpool.repository.PoolTeamRepository;
 import com.nhlpool.repository.WatchlistRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,20 @@ public class DraftService {
     private final PlayerRepository playerRepository;
     private final PoolTeamRepository poolTeamRepository;
     private final WatchlistRepository watchlistRepository;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    /** Lightweight event pushed over WebSocket to all draft viewers. */
+    public record DraftPickEvent(
+            int pickNumber,
+            long playerId,
+            String playerFirstName,
+            String playerLastName,
+            String playerPosition,
+            String playerTeamAbbrev,
+            String playerHeadshotUrl,
+            long teamId,
+            String teamName
+    ) {}
 
     public DraftConfig getConfig() {
         return draftConfigRepository.findAll().stream().findFirst()
@@ -121,6 +136,20 @@ public class DraftService {
             config.setStatus(DraftStatus.COMPLETED);
         }
         draftConfigRepository.save(config);
+
+        // Broadcast real-time pick event to all connected WebSocket clients
+        DraftPickEvent event = new DraftPickEvent(
+                pick.getPickNumber(),
+                player.getId(),
+                player.getFirstName(),
+                player.getLastName(),
+                player.getPosition(),
+                player.getTeamAbbrev(),
+                player.getHeadshotUrl(),
+                team.getId(),
+                team.getName()
+        );
+        messagingTemplate.convertAndSend("/topic/draft-picks", event);
 
         return pick;
     }

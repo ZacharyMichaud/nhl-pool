@@ -40,6 +40,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()         // SockJS WebSocket handshake
+                        .requestMatchers("/ws-native/**").permitAll()  // Native WebSocket handshake
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/*.js", "/*.css", "/*.ico", "/*.woff2").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

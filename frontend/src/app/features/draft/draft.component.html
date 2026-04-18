@@ -286,6 +286,35 @@
 </div>
 
 <!-- ════════════════════════════════
+     LIVE PICK BROADCAST POPUP
+════════════════════════════════ -->
+<div class="live-pick-overlay" *ngIf="livePickEvent()" (click)="dismissLivePick()">
+  <div class="live-pick-popup" (click)="$event.stopPropagation()">
+    <button class="live-pick-dismiss" (click)="dismissLivePick()">✕</button>
+    <div class="live-pick-crown">🏒</div>
+    <div class="live-pick-label">Just Drafted</div>
+    <div class="live-pick-player-row">
+      <img [src]="livePickEvent()!.playerHeadshotUrl" class="live-pick-headshot"
+           loading="lazy" onerror="this.style.display='none'">
+      <div class="live-pick-info">
+        <div class="live-pick-name">
+          {{ livePickEvent()!.playerFirstName }} {{ livePickEvent()!.playerLastName }}
+        </div>
+        <div class="live-pick-meta">
+          <span class="live-pick-pos">{{ formatLivePosition(livePickEvent()!.playerPosition) }}</span>
+          <span class="live-pick-team-abbrev">{{ livePickEvent()!.playerTeamAbbrev }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="live-pick-team-badge"
+         [class]="'live-pick-team-badge team-badge-' + teamColorIndex(livePickEvent()!.teamId)">
+      {{ livePickEvent()!.teamName }}
+    </div>
+    <div class="live-pick-pick-num">Pick #{{ livePickEvent()!.pickNumber }}</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
      SHARED TEMPLATES
 ════════════════════════════════ -->
 
@@ -307,7 +336,7 @@
           <th class="col-stat sortable" (click)="sortBy('pwg')" [class.active]="sortColumn === 'pwg'">PPG <span class="sort-arrow">{{ getSortArrow('pwg') }}</span></th>
           <th class="col-stat sortable" (click)="sortBy('ppp')" [class.active]="sortColumn === 'ppp'">PPP <span class="sort-arrow">{{ getSortArrow('ppp') }}</span></th>
           <th class="col-stat sortable" *ngIf="selectedSplit === 'full'" (click)="sortBy('toi')" [class.active]="sortColumn === 'toi'">TOI/GP <span class="sort-arrow">{{ getSortArrow('toi') }}</span></th>
-          <th class="col-action" *ngIf="config()?.status === 'IN_PROGRESS'"></th>
+
         </tr>
       </thead>
       <tbody>
@@ -336,9 +365,7 @@
           <td class="col-stat">{{ getDisplayStat(p, 'pwg') }}</td>
           <td class="col-stat">{{ getDisplayStat(p, 'ppp') }}</td>
           <td class="col-stat" *ngIf="selectedSplit === 'full'">{{ p.regularSeasonAvgToi || '-' }}</td>
-          <td class="col-action" *ngIf="config()?.status === 'IN_PROGRESS' && isMyTurn()">
-            <button class="btn-primary pick-btn" (click)="$event.stopPropagation(); openDraftConfirm(p)">Pick</button>
-          </td>
+
         </tr>
       </tbody>
     </table>
@@ -368,14 +395,17 @@
 
 <!-- History Content Template -->
 <ng-template #historyContent>
-  <div *ngFor="let pick of filteredHistory()" class="pick-row">
+  <div *ngFor="let pick of filteredHistory()"
+       class="pick-row"
+       [class]="'pick-row team-row-' + teamColorIndex(pick.team?.id)">
     <span class="pick-num">#{{ pick.pickNumber }}</span>
     <img [src]="pick.player?.headshotUrl" class="pick-headshot" loading="lazy" onerror="this.style.display='none'">
     <div class="pick-info">
       <span class="pick-player">{{ pick.player?.firstName }} {{ pick.player?.lastName }}</span>
-      <span class="pick-team">{{ pick.team?.name }}</span>
     </div>
-    <span class="pick-pos">{{ formatPosition(pick.player?.position) }}</span>
+    <span class="pick-team-badge" [class]="'pick-team-badge team-badge-' + teamColorIndex(pick.team?.id)">
+      {{ pick.team?.name }}
+    </span>
   </div>
   <p *ngIf="filteredHistory().length === 0" class="empty">No picks yet</p>
 </ng-template>

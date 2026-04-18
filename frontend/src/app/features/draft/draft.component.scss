@@ -754,13 +754,67 @@ $tab-bar-height: 64px;
   -webkit-overflow-scrolling: touch;
 }
 
-.pick-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); min-height: 52px; }
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  min-height: 52px;
+  border-radius: 8px;
+  transition: background 0.12s;
+
+  &:hover { background: rgba(255,255,255,0.03); }
+}
+
 .pick-num { color: var(--text-muted); font-size: 12px; font-weight: 600; min-width: 28px; }
-.pick-headshot { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--bg-secondary); }
-.pick-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.pick-player { font-weight: 600; font-size: 13px; }
-.pick-team { color: var(--text-secondary); font-size: 11px; }
-.pick-pos { color: var(--text-muted); font-size: 12px; }
+.pick-headshot { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--bg-secondary); flex-shrink: 0; }
+.pick-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow: hidden; }
+.pick-player { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+// ── Team badge ────────────────────────────────────────────────────────────────
+.pick-team-badge {
+  flex-shrink: 0;
+  max-width: 110px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+}
+
+// 10 vibrant team color palettes (bg / text)
+$team-colors: (
+  0: (bg: #00c3ff, text: #001a24),   // cyan
+  1: (bg: #a855f7, text: #1a0030),   // purple
+  2: (bg: #f59e0b, text: #1c1000),   // amber
+  3: (bg: #10b981, text: #001a10),   // emerald
+  4: (bg: #f43f5e, text: #200008),   // rose
+  5: (bg: #3b82f6, text: #000e28),   // blue
+  6: (bg: #fb923c, text: #1c0800),   // orange
+  7: (bg: #e879f9, text: #200026),   // fuchsia
+  8: (bg: #84cc16, text: #0d1500),   // lime
+  9: (bg: #06b6d4, text: #001a1f),   // teal
+);
+
+@each $i, $palette in $team-colors {
+  $bg:   map-get($palette, bg);
+  $text: map-get($palette, text);
+
+  .team-badge-#{$i} {
+    background: rgba($bg, 0.18);
+    color: $bg;
+    border: 1px solid rgba($bg, 0.35);
+  }
+
+  .team-row-#{$i} {
+    border-left: 3px solid rgba($bg, 0.55);
+  }
+}
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 .empty { color: var(--text-muted); text-align: center; padding: 32px 16px; font-size: 13px; }
@@ -1098,4 +1152,169 @@ $tab-bar-height: 64px;
 // ── Desktop row: show pointer + highlight when it's your turn ─────────────────
 .desktop-layout .player-row.my-turn-clickable {
   cursor: pointer;
+}
+
+// ── Live Pick Broadcast Popup ──────────────────────────────────────────────────
+@keyframes live-pick-slide-in {
+  from {
+    transform: translateY(-120%) scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes live-pick-crown-bounce {
+  0%, 100% { transform: scale(1) rotate(-6deg); }
+  50%       { transform: scale(1.25) rotate(6deg); }
+}
+
+.live-pick-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 72px;
+  // Transparent overlay — clicking it dismisses
+  pointer-events: auto;
+}
+
+.live-pick-popup {
+  position: relative;
+  width: min(340px, 90vw);
+  background: linear-gradient(145deg, rgba(15, 25, 40, 0.96), rgba(8, 18, 32, 0.98));
+  border: 1px solid rgba(0, 195, 255, 0.3);
+  border-radius: 20px;
+  padding: 24px 20px 20px;
+  text-align: center;
+  animation: live-pick-slide-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  box-shadow: 0 8px 48px rgba(0, 195, 255, 0.18), 0 2px 12px rgba(0,0,0,0.6);
+  backdrop-filter: blur(24px);
+  pointer-events: auto;
+
+  // Auto-dismiss progress bar at bottom
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 3px;
+    border-radius: 0 0 20px 20px;
+    background: var(--accent);
+    animation: live-pick-progress 4.5s linear forwards;
+    transform-origin: left;
+  }
+}
+
+@keyframes live-pick-progress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+.live-pick-dismiss {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+  line-height: 1;
+
+  &:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
+}
+
+.live-pick-crown {
+  font-size: 32px;
+  display: block;
+  animation: live-pick-crown-bounce 0.7s ease-in-out infinite alternate;
+  margin-bottom: 4px;
+}
+
+.live-pick-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.live-pick-player-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.live-pick-headshot {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+  border: 2px solid rgba(0,195,255,0.3);
+}
+
+.live-pick-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.live-pick-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.live-pick-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.live-pick-pos {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-glow);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.live-pick-team-abbrev {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.05);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.live-pick-team-badge {
+  display: inline-block;
+  padding: 5px 18px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  margin-bottom: 10px;
+}
+
+.live-pick-pick-num {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
 }

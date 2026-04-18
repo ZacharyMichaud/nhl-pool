@@ -3,9 +3,10 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { catchError, EMPTY, of } from 'rxjs';
+import { catchError, EMPTY, of, Subscription } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { DraftEventService, DraftPickEvent } from '../../core/draft-event.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
 
@@ -24,23 +25,25 @@ export class DraftComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   protected auth = inject(AuthService);
   private snackBar = inject(MatSnackBar);
+  private draftEvents = inject(DraftEventService);
+
+  private wsSub?: Subscription;
 
   players = signal<any[]>([]);
   filteredPlayers = signal<any[]>([]);
   board = signal<any[]>([]);
   config = signal<any>(null);
+  poolTeams = signal<any[]>([]);
 
   // ── Draft History ──
   /** null = show all teams */
   selectedHistoryTeamId = signal<number | null>(null);
 
   poolTeamOptions = computed<DropdownOption[]>(() => {
-    const seen = new Map<number, string>();
-    for (const pick of this.board()) {
-      if (pick.team) seen.set(pick.team.id, pick.team.name);
-    }
     const opts: DropdownOption[] = [{ value: '', label: 'All Teams' }];
-    seen.forEach((name, id) => opts.push({ value: String(id), label: name }));
+    for (const t of this.poolTeams()) {
+      opts.push({ value: String(t.id), label: t.name });
+    }
     return opts;
   });
 
@@ -116,12 +119,18 @@ export class DraftComponent implements OnInit, OnDestroy {
       this.loadPlayers();
       this.loadBoard();
       this.loadWatchlist();
+      this.loadPoolTeams();
       this.api.getDraftConfig()
         .pipe(catchError(() => EMPTY))
         .subscribe((c) => this.config.set(c));
     });
 
+    // ── Real-time WebSocket pick events ──
+    this.draftEvents.connect();
+    this.wsSub = this.draftEvents.picks$.subscribe((event) => this.handleRemotePick(event));
+
     this.pollInterval = setInterval(() => {
+      this.loadPlayers();   // keep available-player list in sync (fallback when WS fails)
       this.loadBoard();
       this.loadWatchlist();
       this.api.getDraftConfig()
@@ -133,6 +142,8 @@ export class DraftComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     document.body.classList.remove('draft-open'); // restore scroll for other pages
     if (this.pollInterval) clearInterval(this.pollInterval);
+    this.wsSub?.unsubscribe();
+    this.draftEvents.disconnect();
   }
 
   // ── Players ──
@@ -256,8 +267,14 @@ export class DraftComponent implements OnInit, OnDestroy {
   loadBoard() {
     this.api.getDraftBoard()
       .pipe(catchError(() => EMPTY))
-      .subscribe((b) => {
-        this.board.set(b);
+      .subscribe((b) => this.board.set(b));
+  }
+
+  loadPoolTeams() {
+    this.api.getTeams()
+      .pipe(catchError(() => EMPTY))
+      .subscribe((t) => {
+        this.poolTeams.set(t);
         this.initHistoryFilter();
       });
   }
@@ -316,6 +333,45 @@ export class DraftComponent implements OnInit, OnDestroy {
       error: (err) => this.snackBar.open(err.error?.error || 'Pick failed', 'OK', { duration: 4000 }),
     });
   }
+
+  // ── Live pick popup (driven by WebSocket events) ──
+
+  livePickEvent = signal<DraftPickEvent | null>(null);
+  private livePickTimer: any = null;
+
+  private handleRemotePick(event: DraftPickEvent) {
+    // 1. Remove the player from the available list immediately
+    const current = this.players();
+    const updated = current.filter((p: any) => p.id !== event.playerId);
+    if (updated.length !== current.length) {
+      this.players.set(updated);
+      this.filterPlayers();
+    }
+
+    // 2. Re-fetch board & config so history and turn indicator are fresh
+    this.loadBoard();
+    this.api.getDraftConfig()
+      .pipe(catchError(() => EMPTY))
+      .subscribe((c) => this.config.set(c));
+
+    // 3. Show the animated popup
+    this.livePickEvent.set(event);
+    if (this.livePickTimer) clearTimeout(this.livePickTimer);
+    this.livePickTimer = setTimeout(() => this.livePickEvent.set(null), 4500);
+  }
+
+  dismissLivePick() {
+    if (this.livePickTimer) clearTimeout(this.livePickTimer);
+    this.livePickEvent.set(null);
+  }
+
+  formatLivePosition(pos: string | null | undefined): string {
+    if (!pos) return '';
+    if (pos === 'L') return 'LW';
+    if (pos === 'R') return 'RW';
+    return pos;
+  }
+
 
   // ── Watchlist ──
 
@@ -433,13 +489,16 @@ export class DraftComponent implements OnInit, OnDestroy {
     return id === null ? '' : String(id);
   }
 
-  /** Initialise history filter to user's own team once board loads */
+  /** History filter defaults to null (All Teams) */
   private initHistoryFilter() {
-    const myId = this.auth.teamId();
-    if (myId != null && this.selectedHistoryTeamId() === null) {
-      // Default to user's own team if they have one
-      const hasPick = this.board().some(p => p.team?.id === myId);
-      if (hasPick) this.selectedHistoryTeamId.set(myId as number);
-    }
+    // no-op: selectedHistoryTeamId stays null → "All Teams" shown by default
+  }
+
+  /** Returns a stable color index (0–9) for each pool team, for CSS class binding. */
+  teamColorIndex(teamId: number | undefined | null): number {
+    if (teamId == null) return 0;
+    const teams = this.poolTeams();
+    const idx = teams.findIndex(t => t.id === teamId);
+    return idx === -1 ? 0 : idx % 10;
   }
 }
