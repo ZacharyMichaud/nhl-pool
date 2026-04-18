@@ -1,3 +1,99 @@
+.view-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: var(--bg-card);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  width: fit-content;
+
+  .tab-btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: all 0.2s;
+
+    &:hover { color: var(--text-primary); }
+    &.active {
+      background: var(--bg-secondary);
+      color: var(--accent);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+  }
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+
+  .p-count { color: var(--text-muted); font-size: 12px; margin-left: auto; }
+}
+
+.table-card { padding: 0; overflow: hidden; }
+.table-scroll { overflow-x: auto; }
+
+.players-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th {
+    padding: 12px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--border);
+  }
+
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+
+  .col-rank { width: 40px; color: var(--text-muted); text-align: center; }
+  .col-stat { text-align: right; font-variant-numeric: tabular-nums; }
+  th.col-stat { text-align: right; }
+  .pts { color: var(--accent); font-weight: 700; }
+
+  .p-cell { display: flex; align-items: center; gap: 10px; }
+  .p-headshot { width: 30px; height: 30px; border-radius: 50%; background: var(--bg-secondary); }
+  .p-info { display: flex; flex-direction: column; }
+  .p-name { font-weight: 600; white-space: nowrap; }
+  .p-team { font-size: 10px; color: var(--text-muted); }
+
+  .pool-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  tr.eliminated { opacity: 0.5; }
+}
+
+$team-colors: (
+  0: #00c3ff, 1: #a855f7, 2: #f59e0b, 3: #10b981, 4: #f43f5e,
+  5: #3b82f6, 6: #fb923c, 7: #e879f9, 8: #84cc16, 9: #06b6d4,
+);
+
+@each $i, $color in $team-colors {
+  .badge-#{$i} {
+    background: rgba($color, 0.15);
+    color: $color;
+    border: 1px solid rgba($color, 0.3);
+  }
+  .team-row-#{$i} {
+    border-left: 3px solid rgba($color, 0.4);
+  }
+}
+
 .standing-card {
   background: var(--bg-card);
   border: 1px solid var(--border);

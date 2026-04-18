@@ -44,6 +44,103 @@
 
 .empty { color: var(--text-muted); text-align: center; padding: 20px; font-size: 13px; }
 
+// ── Playoff Card ─────────────────────────────────────────────────────────────
+.playoff-card {
+  .widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 12px;
+
+    h2 { margin: 0; font-size: 16px; font-weight: 700; }
+  }
+
+  .team-filter {
+    min-width: 140px;
+  }
+}
+
+.performer-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.performer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  &:last-of-type { border-bottom: none; }
+
+  .p-rank {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    width: 16px;
+  }
+
+  .p-headshot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    object-fit: cover;
+  }
+
+  .p-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .p-name {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .p-meta {
+    font-size: 10px;
+    color: var(--text-secondary);
+  }
+
+  .p-stats {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .p-pts {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--accent);
+  }
+
+  .p-ga {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+}
+
+// Team row colors (copied from standard pattern)
+$team-colors: (
+  0: #00c3ff, 1: #a855f7, 2: #f59e0b, 3: #10b981, 4: #f43f5e,
+  5: #3b82f6, 6: #fb923c, 7: #e879f9, 8: #84cc16, 9: #06b6d4,
+);
+
+@each $i, $color in $team-colors {
+  .team-row-#{$i} {
+    border-left: 3px solid rgba($color, 0.4);
+    padding-left: 8px;
+    margin-left: -8px;
+  }
+}
+
 // ── Quick Links ───────────────────────────────────────────────────────────────
 .quick-links {
   display: grid;

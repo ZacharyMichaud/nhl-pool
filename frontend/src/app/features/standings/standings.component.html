@@ -1,51 +1,122 @@
 <div class="page-container">
   <div class="page-header">
-    <h1>Pool Standings</h1>
-    <p>Live rankings based on your drafted players' playoff performance</p>
+    <h1>Standings & Stats</h1>
+    <p>Live rankings and player performance across all pool teams</p>
   </div>
 
-  <div *ngFor="let team of standings(); let i = index"
-       class="standing-card"
-       [class.expanded]="expanded === team.teamId"
-       (click)="toggle(team.teamId)">
-    <div class="standing-header">
-      <span class="rank" [ngClass]="'rank-' + (i < 3 ? (i + 1) : 'other')">{{ i + 1 }}</span>
-      <div class="team-main">
-        <span class="team-name">{{ team.teamName }}</span>
-        <span class="team-members">{{ team.memberNames?.join(' & ') }}</span>
-      </div>
-      <div class="points-group">
-        <div class="points-item">
-          <span class="label">Players</span>
-          <span class="val">{{ team.playerPoints }}</span>
-        </div>
-        <div class="points-item">
-          <span class="label">Predictions</span>
-          <span class="val">{{ team.predictionPoints }}</span>
-        </div>
-        <div class="points-item total">
-          <span class="label">Total</span>
-          <span class="val">{{ team.totalPoints }}</span>
-        </div>
-      </div>
-      <span class="expand-icon">{{ expanded === team.teamId ? '▲' : '▼' }}</span>
-    </div>
+  <!-- View Toggle -->
+  <div class="view-tabs">
+    <button class="tab-btn" [class.active]="view() === 'teams'" (click)="view.set('teams')">Teams</button>
+    <button class="tab-btn" [class.active]="view() === 'players'" (click)="view.set('players')">Players</button>
+  </div>
 
-    <div *ngIf="expanded === team.teamId" class="player-breakdown">
-      <div *ngFor="let ps of team.playerScores" class="pb-row" [class.eliminated]="ps.eliminated">
-        <img [src]="ps.headshotUrl" class="pb-headshot" loading="lazy" onerror="this.style.display='none'">
-        <div class="pb-info">
-          <span class="pb-name">{{ ps.playerName }}</span>
-          <span class="pb-meta">{{ ps.position }} · {{ ps.teamAbbrev }}</span>
+  <!-- Team View -->
+  <div class="standings-view" *ngIf="view() === 'teams'">
+    <div *ngFor="let team of standings(); let i = index"
+         class="standing-card"
+         [class.expanded]="expanded === team.teamId"
+         (click)="toggle(team.teamId)">
+      <div class="standing-header">
+        <span class="rank" [ngClass]="'rank-' + (i < 3 ? (i + 1) : 'other')">{{ i + 1 }}</span>
+        <div class="team-main">
+          <span class="team-name">{{ team.teamName }}</span>
+          <span class="team-members">{{ team.memberNames?.join(' & ') }}</span>
         </div>
-        <span class="stat-badge goals">{{ ps.goals }}G</span>
-        <span class="stat-badge assists">{{ ps.assists }}A</span>
-        <span class="stat-badge points">{{ ps.points }} pts</span>
+        <div class="points-group">
+          <div class="points-item">
+            <span class="label">Players</span>
+            <span class="val">{{ team.playerPoints }}</span>
+          </div>
+          <div class="points-item">
+            <span class="label">Predictions</span>
+            <span class="val">{{ team.predictionPoints }}</span>
+          </div>
+          <div class="points-item total">
+            <span class="label">Total</span>
+            <span class="val">{{ team.totalPoints }}</span>
+          </div>
+        </div>
+        <span class="expand-icon">{{ expanded === team.teamId ? '▲' : '▼' }}</span>
       </div>
+
+      <div *ngIf="expanded === team.teamId" class="player-breakdown">
+        <div *ngFor="let ps of team.playerScores" class="pb-row" [class.eliminated]="ps.eliminated">
+          <img [src]="ps.headshotUrl" class="pb-headshot" loading="lazy" onerror="this.style.display='none'">
+          <div class="pb-info">
+            <span class="pb-name">{{ ps.playerName }}</span>
+            <span class="pb-meta">{{ ps.position }} · {{ ps.teamAbbrev }}</span>
+          </div>
+          <span class="stat-badge goals">{{ ps.goals }}G</span>
+          <span class="stat-badge assists">{{ ps.assists }}A</span>
+          <span class="stat-badge points">{{ ps.points }} pts</span>
+        </div>
+      </div>
+    </div>
+    <div *ngIf="standings().length === 0" class="card">
+      <p class="empty">No standings yet — complete the draft first!</p>
     </div>
   </div>
 
-  <div *ngIf="standings().length === 0" class="card">
-    <p class="empty">No standings yet — complete the draft first!</p>
+  <!-- Player View -->
+  <div class="players-view" *ngIf="view() === 'players'">
+    <div class="filter-bar">
+      <app-dropdown
+        [options]="teamOptions()"
+        [value]="teamDropdownValue"
+        (valueChange)="setTeam($event)">
+      </app-dropdown>
+      <span class="p-count">{{ filteredPicks().length }} players found</span>
+    </div>
+
+    <div class="card table-card" *ngIf="filteredPicks().length > 0; else noPlayers">
+      <div class="table-scroll">
+        <table class="players-table">
+          <thead>
+            <tr>
+              <th class="col-rank">#</th>
+              <th class="col-player">Player</th>
+              <th class="col-pos">Pos</th>
+              <th class="col-stat">GP</th>
+              <th class="col-stat">G</th>
+              <th class="col-stat">A</th>
+              <th class="col-stat pts">PTS</th>
+              <th class="col-stat">PPP</th>
+              <th class="col-pool">Pool Team</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let pick of filteredPicks(); let i = index" 
+                class="player-row"
+                [class.eliminated]="pick.player?.eliminated"
+                [class]="'player-row team-row-' + teamColorIndex(pick.team?.id)">
+              <td class="col-rank">{{ i + 1 }}</td>
+              <td class="col-player">
+                <div class="p-cell">
+                  <img [src]="pick.player?.headshotUrl" class="p-headshot" loading="lazy" onerror="this.style.display='none'">
+                  <div class="p-info">
+                    <span class="p-name">{{ pick.player?.firstName }} {{ pick.player?.lastName }}</span>
+                    <span class="p-team">{{ pick.player?.teamAbbrev }}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="col-pos">{{ formatPosition(pick.player?.position) }}</td>
+              <td class="col-stat">{{ pick.player?.playoffGamesPlayed ?? 0 }}</td>
+              <td class="col-stat">{{ pick.player?.playoffGoals ?? 0 }}</td>
+              <td class="col-stat">{{ pick.player?.playoffAssists ?? 0 }}</td>
+              <td class="col-stat pts">{{ pick.player?.playoffPoints ?? 0 }}</td>
+              <td class="col-stat">{{ pick.player?.playoffPowerPlayPoints ?? 0 }}</td>
+              <td class="col-pool">
+                <span class="pool-badge" [class]="'badge-' + teamColorIndex(pick.team?.id)">
+                  {{ pick.team?.name }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <ng-template #noPlayers>
+      <div class="card empty">No players found for this selection.</div>
+    </ng-template>
   </div>
 </div>

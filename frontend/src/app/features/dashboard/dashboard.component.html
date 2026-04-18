@@ -25,6 +25,40 @@
       <a routerLink="/standings" class="view-all">View Full Standings →</a>
     </div>
 
+    <!-- Playoff Stats Widget -->
+    <div class="card playoff-card">
+      <div class="widget-header">
+        <h2>🔥 Playoff Performers</h2>
+        <app-dropdown
+          class="team-filter"
+          [options]="teamOptions()"
+          [value]="teamDropdownValue"
+          (valueChange)="setTeam($event)">
+        </app-dropdown>
+      </div>
+
+      <div class="performer-list" *ngIf="filteredPicks().length > 0; else noPerformers">
+        <div *ngFor="let pick of filteredPicks(); let i = index" 
+             class="performer-row"
+             [class]="'performer-row team-row-' + teamColorIndex(pick.team?.id)">
+          <span class="p-rank">{{ i + 1 }}</span>
+          <img [src]="pick.player?.headshotUrl" class="p-headshot" onerror="this.style.display='none'">
+          <div class="p-info">
+            <span class="p-name">{{ pick.player?.firstName?.charAt(0) }}. {{ pick.player?.lastName }}</span>
+            <span class="p-meta">{{ pick.player?.teamAbbrev }} · {{ pick.player?.position }}</span>
+          </div>
+          <div class="p-stats">
+            <span class="p-pts">{{ pick.player?.playoffPoints ?? 0 }} pts</span>
+            <span class="p-ga">{{ pick.player?.playoffGoals ?? 0 }}G / {{ pick.player?.playoffAssists ?? 0 }}A</span>
+          </div>
+        </div>
+      </div>
+      <ng-template #noPerformers>
+        <p class="empty">No drafted players found.</p>
+      </ng-template>
+      <a routerLink="/standings" class="view-all">View All Players →</a>
+    </div>
+
     <!-- Quick Links -->
     <div class="quick-links">
       <a routerLink="/draft" class="quick-card">

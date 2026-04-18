@@ -7,7 +7,6 @@ export const routes: Routes = [
   { path: '', canActivate: [authGuard], loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
   { path: 'draft', canActivate: [authGuard], loadComponent: () => import('./features/draft/draft.component').then(m => m.DraftComponent) },
   { path: 'standings', canActivate: [authGuard], loadComponent: () => import('./features/standings/standings.component').then(m => m.StandingsComponent) },
-  { path: 'playoff-stats', canActivate: [authGuard], loadComponent: () => import('./features/playoff-stats/playoff-stats.component').then(m => m.PlayoffStatsComponent) },
   { path: 'my-team', canActivate: [authGuard], loadComponent: () => import('./features/my-team/my-team.component').then(m => m.MyTeamComponent) },
   { path: 'predictions', canActivate: [authGuard], loadComponent: () => import('./features/predictions/predictions.component').then(m => m.PredictionsComponent) },
   { path: 'admin', canActivate: [authGuard, adminGuard], loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent) },

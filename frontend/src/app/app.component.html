@@ -14,7 +14,6 @@
         <a routerLink="/draft"         routerLinkActive="active">Draft</a>
         <a routerLink="/my-team"       routerLinkActive="active">Teams</a>
         <a routerLink="/standings"     routerLinkActive="active">Standings</a>
-        <a routerLink="/playoff-stats" routerLinkActive="active">Playoff Stats</a>
         <a routerLink="/predictions"   routerLinkActive="active">Predictions</a>
         <a *ngIf="auth.isAdmin()" routerLink="/admin" routerLinkActive="active" class="admin-link">Admin</a>
       </div>
@@ -50,7 +49,6 @@
         <a routerLink="/draft"       routerLinkActive="active" (click)="closeMenu()">📋 Draft</a>
         <a routerLink="/my-team"     routerLinkActive="active" (click)="closeMenu()">👥 Teams</a>
         <a routerLink="/standings"   routerLinkActive="active" (click)="closeMenu()">🏆 Standings</a>
-        <a routerLink="/playoff-stats" routerLinkActive="active" (click)="closeMenu()">📊 Playoff Stats</a>
         <a routerLink="/predictions" routerLinkActive="active" (click)="closeMenu()">🎯 Predictions</a>
         <a *ngIf="auth.isAdmin()" routerLink="/admin" routerLinkActive="active" (click)="closeMenu()" class="admin-link">⚙️ Admin</a>
       </nav>
