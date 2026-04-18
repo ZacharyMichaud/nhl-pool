@@ -22,12 +22,15 @@ public class PredictionController {
     private final SeriesRepository seriesRepository;
     private final PoolTeamRepository poolTeamRepository;
     private final PoolRoundRepository poolRoundRepository;
+    private final UserRepository userRepository;
 
     @GetMapping("/round/{roundNumber}")
     @Transactional(readOnly = true)
     public ResponseEntity<List<Prediction>> getPredictionsByRound(
             @PathVariable Integer roundNumber,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal User principal) {
+        User user = userRepository.findByUsername(principal.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
         Long teamId = user.getTeam() != null ? user.getTeam().getId() : null;
         if (teamId == null) {
             return ResponseEntity.ok(List.of());
@@ -38,9 +41,11 @@ public class PredictionController {
     @PostMapping
     @Transactional
     public ResponseEntity<Prediction> submitPrediction(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal User principal,
             @RequestBody Map<String, Object> body) {
 
+        User user = userRepository.findByUsername(principal.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
         Long teamId = user.getTeam() != null ? user.getTeam().getId() : null;
         if (teamId == null) {
             throw new IllegalStateException("You are not assigned to a team");
