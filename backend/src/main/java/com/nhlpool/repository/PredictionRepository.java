@@ -16,4 +16,7 @@ public interface PredictionRepository extends JpaRepository<Prediction, Long> {
 
     @Query("select p from Prediction p join fetch p.series s join fetch s.round where p.team.id = :teamId")
     List<Prediction> findByTeamId(Long teamId);
+
+    @Query("select p from Prediction p join fetch p.series s join fetch s.round where p.team.id = :teamId and s.round.roundNumber = :roundNumber")
+    List<Prediction> findByTeamIdAndRoundNumber(Long teamId, Integer roundNumber);
 }

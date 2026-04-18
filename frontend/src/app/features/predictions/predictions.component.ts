@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { forkJoin, of } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
@@ -21,6 +22,7 @@ export class PredictionsComponent implements OnInit {
   series = signal<any[]>([]);
   predictions = signal<Record<number, { winner: string; games: number } | undefined>>({});
   selectedRound = 1;
+  saving = signal(false);
 
   roundOptions = [
     { value: 1, label: 'Round 1' },
@@ -42,10 +44,28 @@ export class PredictionsComponent implements OnInit {
 
   selectRound(round: number) {
     this.selectedRound = round;
-    this.api.getSeries(round).subscribe((s) => {
-      this.series.set(s);
-      const preds: Record<number, any> = {};
-      s.forEach((ser: any) => (preds[ser.id] = { winner: '', games: 4 }));
+
+    // Fetch series and existing predictions in parallel
+    forkJoin({
+      seriesList: this.api.getSeries(round),
+      savedPreds: this.api.getPredictions(round),
+    }).subscribe(({ seriesList, savedPreds }) => {
+      this.series.set(seriesList);
+
+      // Build a map of seriesId → saved prediction
+      const savedMap: Record<number, { winner: string; games: number }> = {};
+      savedPreds.forEach((p: any) => {
+        savedMap[p.series.id] = {
+          winner: p.predictedWinnerAbbrev,
+          games: p.predictedGames,
+        };
+      });
+
+      // Initialize predictions: use saved value if available, otherwise blank
+      const preds: Record<number, { winner: string; games: number }> = {};
+      seriesList.forEach((s: any) => {
+        preds[s.id] = savedMap[s.id] ?? { winner: '', games: 4 };
+      });
       this.predictions.set(preds);
     });
   }
@@ -67,12 +87,35 @@ export class PredictionsComponent implements OnInit {
     this.predictions.set({ ...current, [seriesId]: { ...(current[seriesId] ?? { winner: '', games: 4 }), games } });
   }
 
-  submitPrediction(s: any) {
-    const pred = this.predictions()[s.id];
-    if (!pred?.winner) return;
-    this.api.submitPrediction(s.id, pred.winner, pred.games).subscribe({
-      next: () => this.snackBar.open('Prediction saved!', 'OK', { duration: 3000 }),
-      error: (err) => this.snackBar.open(err.error?.error || 'Failed', 'OK', { duration: 4000 }),
+  get hasAnyPrediction(): boolean {
+    return this.series().some(s => {
+      const pred = this.predictions()[s.id];
+      return !s.winnerAbbrev && pred?.winner;
+    });
+  }
+
+  saveAll() {
+    if (this.saving()) return;
+
+    const calls = this.series()
+      .filter(s => !s.winnerAbbrev && this.predictions()[s.id]?.winner)
+      .map(s => {
+        const pred = this.predictions()[s.id]!;
+        return this.api.submitPrediction(s.id, pred.winner, pred.games);
+      });
+
+    if (calls.length === 0) return;
+
+    this.saving.set(true);
+    forkJoin(calls).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.snackBar.open('All predictions saved!', 'OK', { duration: 3000 });
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.snackBar.open(err.error?.error || 'Failed to save', 'OK', { duration: 4000 });
+      },
     });
   }
 }

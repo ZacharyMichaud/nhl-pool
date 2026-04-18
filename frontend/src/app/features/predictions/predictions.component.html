@@ -71,12 +71,9 @@
           </app-dropdown>
         </div>
 
-        <button class="btn-save"
-                (click)="submitPrediction(s)"
-                [disabled]="!predictions()[s.id]?.winner || !!s.winnerAbbrev">
-          <span *ngIf="s.winnerAbbrev">🔒 Locked</span>
-          <span *ngIf="!s.winnerAbbrev">Save</span>
-        </button>
+        <div class="locked-indicator" *ngIf="s.winnerAbbrev">
+          🔒 Locked
+        </div>
       </div>
     </div>
 
@@ -85,5 +82,15 @@
       <p class="empty-title">No series data yet</p>
       <p class="empty-sub">Ask an admin to sync the series for this round.</p>
     </div>
+  </div>
+
+  <!-- Single Save All button -->
+  <div class="save-all-bar" *ngIf="series().length > 0">
+    <button class="btn-save-all"
+            (click)="saveAll()"
+            [disabled]="!hasAnyPrediction || saving()">
+      <span *ngIf="saving()">⏳ Saving…</span>
+      <span *ngIf="!saving()">💾 Save Predictions</span>
+    </button>
   </div>
 </div>

@@ -255,3 +255,54 @@
     text-align: center;
   }
 }
+
+// ── Save All Bar ─────────────────────────────────
+
+.save-all-bar {
+  position: sticky;
+  bottom: 16px;
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  z-index: 10;
+}
+
+.btn-save-all {
+  padding: 14px 40px;
+  border-radius: 50px;
+  border: none;
+  background: linear-gradient(135deg, var(--accent) 0%, #0088cc 100%);
+  color: white;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s ease;
+  letter-spacing: 0.4px;
+  box-shadow: 0 4px 24px rgba(0, 195, 255, 0.3);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 28px rgba(0, 195, 255, 0.45);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: var(--bg-card-hover);
+    color: var(--text-muted);
+    box-shadow: none;
+    transform: none;
+  }
+}
+
+// ── Locked indicator ─────────────────────────────
+
+.locked-indicator {
+  margin-top: 4px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 8px;
+}

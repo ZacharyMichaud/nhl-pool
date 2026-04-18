@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
-import { Client, IMessage } from '@stomp/stompjs';
+import { Client, IFrame, IMessage } from '@stomp/stompjs';
 import { environment } from '../../environments/environment';
 
 export interface DraftPickEvent {
@@ -20,6 +20,12 @@ export class DraftEventService implements OnDestroy {
   private client: Client | null = null;
   private pickSubject = new Subject<DraftPickEvent>();
 
+  /** Consecutive failure tracking for exponential backoff */
+  private failureCount = 0;
+  private readonly MAX_FAILURES = 10;
+  private readonly BASE_DELAY_MS = 5_000;
+  private readonly MAX_DELAY_MS = 60_000;
+
   /** Observable that emits every time any user makes a draft pick. */
   readonly picks$ = this.pickSubject.asObservable();
 
@@ -30,11 +36,19 @@ export class DraftEventService implements OnDestroy {
   connect() {
     if (this.client?.active) return;
 
+    this.failureCount = 0;
+
     this.client = new Client({
-      // brokerURL uses ws:// / wss:// — native WebSocket, no SockJS needed
       brokerURL: this.resolveWsUrl(),
-      reconnectDelay: 5000,
+      reconnectDelay: this.BASE_DELAY_MS,
+      heartbeatIncoming: 10_000,
+      heartbeatOutgoing: 10_000,
+
       onConnect: () => {
+        // Successful connection — reset backoff
+        this.failureCount = 0;
+        if (this.client) this.client.reconnectDelay = this.BASE_DELAY_MS;
+
         this.client!.subscribe('/topic/draft-picks', (msg: IMessage) => {
           try {
             const event: DraftPickEvent = JSON.parse(msg.body);
@@ -44,6 +58,19 @@ export class DraftEventService implements OnDestroy {
           }
         });
       },
+
+      // Intercept the raw WebSocket error so the browser console isn't spammed
+      onWebSocketError: (_error: Event) => {
+        this.handleFailure('WebSocket error');
+      },
+
+      onStompError: (_frame: IFrame) => {
+        this.handleFailure('STOMP error');
+      },
+
+      onDisconnect: () => {
+        this.handleFailure('disconnected');
+      },
     });
 
     this.client.activate();
@@ -52,10 +79,39 @@ export class DraftEventService implements OnDestroy {
   disconnect() {
     this.client?.deactivate();
     this.client = null;
+    this.failureCount = 0;
   }
 
   ngOnDestroy() {
     this.disconnect();
+  }
+
+  // ── Private helpers ────────────────────────────────────────────────────
+
+  private handleFailure(reason: string) {
+    this.failureCount++;
+
+    if (this.failureCount >= this.MAX_FAILURES) {
+      console.warn(
+        `[DraftEventService] Real-time updates unavailable (${reason}) after ` +
+        `${this.MAX_FAILURES} attempts — stopping reconnection. ` +
+        `Draft will rely on polling.`
+      );
+      // Fully deactivate so the browser stops firing connection errors
+      this.client?.deactivate();
+      this.client = null;
+      return;
+    }
+
+    // Exponential backoff: 5s → 10s → 20s → 40s → 60s (capped)
+    const nextDelay = Math.min(
+      this.BASE_DELAY_MS * Math.pow(2, this.failureCount - 1),
+      this.MAX_DELAY_MS
+    );
+
+    if (this.client) {
+      this.client.reconnectDelay = nextDelay;
+    }
   }
 
   /**
@@ -66,8 +122,8 @@ export class DraftEventService implements OnDestroy {
    *   https://myapp.onrender.com/api  →  wss://myapp.onrender.com/ws-native
    */
   private resolveWsUrl(): string {
-    const apiUrl = environment.apiUrl;            // e.g. "http://localhost:8080/api"
-    const base = apiUrl.replace(/\/api$/, '');    // → "http://localhost:8080"
+    const apiUrl = environment.apiUrl;
+    const base = apiUrl.replace(/\/api$/, '');
     const wsBase = base.replace(/^https:\/\//, 'wss://').replace(/^http:\/\//, 'ws://');
     return `${wsBase}/ws-native`;
   }

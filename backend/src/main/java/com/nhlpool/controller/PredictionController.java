@@ -24,8 +24,14 @@ public class PredictionController {
     private final PoolRoundRepository poolRoundRepository;
 
     @GetMapping("/round/{roundNumber}")
-    public ResponseEntity<List<Prediction>> getPredictionsByRound(@PathVariable Integer roundNumber) {
-        return ResponseEntity.ok(predictionRepository.findByRoundNumber(roundNumber));
+    public ResponseEntity<List<Prediction>> getPredictionsByRound(
+            @PathVariable Integer roundNumber,
+            @AuthenticationPrincipal User user) {
+        Long teamId = user.getTeam() != null ? user.getTeam().getId() : null;
+        if (teamId == null) {
+            return ResponseEntity.ok(List.of());
+        }
+        return ResponseEntity.ok(predictionRepository.findByTeamIdAndRoundNumber(teamId, roundNumber));
     }
 
     @PostMapping
