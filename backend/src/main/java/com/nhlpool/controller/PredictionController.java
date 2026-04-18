@@ -3,9 +3,11 @@ package com.nhlpool.controller;
 import com.nhlpool.domain.*;
 import com.nhlpool.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,6 +29,7 @@ public class PredictionController {
     }
 
     @PostMapping
+    @Transactional
     public ResponseEntity<Prediction> submitPrediction(
             @AuthenticationPrincipal User user,
             @RequestBody Map<String, Object> body) {
@@ -40,7 +43,7 @@ public class PredictionController {
         String winner = (String) body.get("predictedWinnerAbbrev");
         Integer games = (Integer) body.get("predictedGames");
 
-        Series series = seriesRepository.findById(seriesId)
+        Series series = seriesRepository.findByIdWithRound(seriesId)
                 .orElseThrow(() -> new IllegalArgumentException("Series not found"));
 
         // Check if round is still accepting predictions (UPCOMING status)
@@ -59,6 +62,16 @@ public class PredictionController {
         prediction.setPredictedGames(games);
 
         return ResponseEntity.ok(predictionRepository.save(prediction));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> handleBadState(IllegalStateException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleBadArg(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
     }
 
     @GetMapping("/series")
