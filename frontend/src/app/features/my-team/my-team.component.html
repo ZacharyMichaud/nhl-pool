@@ -44,6 +44,59 @@
       </div>
     </div>
 
+    <!-- Conn Smythe Section -->
+    <div class="conn-smythe-section card">
+      <div class="cs-header">
+        <span class="cs-trophy">🏆</span>
+        <div class="cs-title-block">
+          <span class="cs-title">Conn Smythe Prediction</span>
+          <span class="cs-subtitle">Playoff MVP pick</span>
+        </div>
+      </div>
+
+      <!-- Editable input: only for the user's own team -->
+      <ng-container *ngIf="isMyTeam(selectedTeam()?.teamId)">
+        <div class="cs-search-wrap">
+          <div class="cs-input-row">
+            <input
+              class="cs-input"
+              type="text"
+              placeholder="Search for a player…"
+              [value]="csSearch()"
+              (input)="onCsSearchInput($any($event.target).value)"
+              (blur)="closeCsDropdown()"
+              autocomplete="off"
+            />
+            <span class="cs-saving" *ngIf="csSaving()">⏳</span>
+          </div>
+          <div class="cs-results" *ngIf="csShowDropdown() && csResults().length > 0">
+            <div
+              *ngFor="let p of csResults()"
+              class="cs-result-row"
+              (mousedown)="pickCsPlayer(p)">
+              <img [src]="p.headshotUrl" class="cs-result-headshot" onerror="this.style.display='none'">
+              <div class="cs-result-info">
+                <span class="cs-result-name">{{ p.fullName }}</span>
+                <span class="cs-result-meta">{{ p.position }} · {{ p.teamAbbrev }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="cs-hint" *ngIf="!selectedTeam()?.connSmythePlayerName">No pick set yet — search above to choose a player.</p>
+      </ng-container>
+
+      <!-- Read-only display: all teams -->
+      <div class="cs-pick-display" [class.cs-no-pick]="!selectedTeam()?.connSmythePlayerName">
+        <ng-container *ngIf="selectedTeam()?.connSmythePlayerName; else noCsPick">
+          <span class="cs-pick-label">Current Pick:</span>
+          <span class="cs-pick-name">{{ selectedTeam()?.connSmythePlayerName }}</span>
+        </ng-container>
+        <ng-template #noCsPick>
+          <span class="cs-pick-empty" *ngIf="!isMyTeam(selectedTeam()?.teamId)">No pick yet</span>
+        </ng-template>
+      </div>
+    </div>
+
     <!-- Roster -->
     <div class="roster-grid">
       <div
