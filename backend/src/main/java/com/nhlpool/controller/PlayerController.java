@@ -1,6 +1,8 @@
 package com.nhlpool.controller;
 
+import com.nhlpool.domain.DraftPick;
 import com.nhlpool.domain.Player;
+import com.nhlpool.repository.DraftPickRepository;
 import com.nhlpool.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,7 @@ import java.util.List;
 public class PlayerController {
 
     private final PlayerRepository playerRepository;
+    private final DraftPickRepository draftPickRepository;
 
     @GetMapping("/available")
     public ResponseEntity<List<Player>> getAvailablePlayers(
@@ -46,5 +49,18 @@ public class PlayerController {
     @GetMapping
     public ResponseEntity<List<Player>> getAllPlayers() {
         return ResponseEntity.ok(playerRepository.findAll());
+    }
+
+    /**
+     * Returns all draft picks (player + pool team) with playoff stats,
+     * optionally filtered to a single pool team.
+     */
+    @GetMapping("/drafted-playoff-stats")
+    public ResponseEntity<List<DraftPick>> getDraftedPlayoffStats(
+            @RequestParam(required = false) Long teamId) {
+        List<DraftPick> picks = teamId != null
+                ? draftPickRepository.findByTeamIdWithPlayerOrderByPickNumberAsc(teamId)
+                : draftPickRepository.findAllWithPlayerAndTeamOrderByPickNumber();
+        return ResponseEntity.ok(picks);
     }
 }

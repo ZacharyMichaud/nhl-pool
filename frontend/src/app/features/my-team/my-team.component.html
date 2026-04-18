@@ -97,6 +97,95 @@
       </div>
     </div>
 
+    <!-- ── Predictions Section (only shown when locked) ─────────────────────── -->
+    <div class="predictions-section" *ngIf="predictionsLocked()">
+      <div class="pred-section-header">
+        <span class="pred-lock-icon">🔒</span>
+        <div>
+          <h3 class="pred-section-title">Locked Predictions</h3>
+          <p class="pred-section-sub">All teams' picks are now visible</p>
+        </div>
+      </div>
+
+      <!-- Round tabs -->
+      <div class="pred-round-tabs">
+        <button
+          *ngFor="let r of roundOptions"
+          [class.active]="selectedPredRound() === r.value"
+          (click)="selectRound(r.value)">
+          {{ r.label }}
+        </button>
+      </div>
+
+      <!-- Series cards -->
+      <div class="pred-series-list" *ngIf="seriesForRound().length > 0; else noSeries">
+        <div class="pred-series-card card" *ngFor="let s of seriesForRound()">
+
+          <!-- Matchup header -->
+          <div class="pred-matchup-header">
+            <div class="pred-team-logo-wrap">
+              <img [src]="s.topSeedLogoUrl" class="pred-team-logo" onerror="this.style.display='none'">
+              <span class="pred-team-abbrev">{{ s.topSeedAbbrev }}</span>
+            </div>
+            <span class="pred-vs">vs</span>
+            <div class="pred-team-logo-wrap">
+              <img [src]="s.bottomSeedLogoUrl" class="pred-team-logo" onerror="this.style.display='none'">
+              <span class="pred-team-abbrev">{{ s.bottomSeedAbbrev }}</span>
+            </div>
+            <div class="pred-winner-badge" *ngIf="s.winnerAbbrev">
+              🏆 {{ s.winnerAbbrev }}
+            </div>
+          </div>
+
+          <!-- All teams' picks for this series -->
+          <div class="pred-picks-table">
+            <div class="pred-picks-header-row">
+              <span class="pred-pick-team-label">Team</span>
+              <span class="pred-pick-winner-label">Pick</span>
+              <span class="pred-pick-games-label">In</span>
+              <span class="pred-pick-result-label">Result</span>
+            </div>
+            <div
+              class="pred-pick-row"
+              *ngFor="let entry of getAllPredsForSeries(s.id)"
+              [class.my-team-row]="isMyTeam(entry.teamId)"
+              [class.correct-winner]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
+              [class.wrong-winner]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">
+
+              <span class="pred-pick-team">
+                {{ entry.teamName }}
+                <span class="you-badge" *ngIf="isMyTeam(entry.teamId)">You</span>
+              </span>
+
+              <span class="pred-pick-winner" *ngIf="entry.pred; else noPred">
+                {{ entry.pred.predictedWinnerAbbrev }}
+              </span>
+              <ng-template #noPred>
+                <span class="pred-pick-winner pred-no-pick">—</span>
+              </ng-template>
+
+              <span class="pred-pick-games" *ngIf="entry.pred">
+                {{ entry.pred.predictedGames }}G
+              </span>
+              <span class="pred-pick-games" *ngIf="!entry.pred">—</span>
+
+              <span class="pred-pick-result" *ngIf="s.winnerAbbrev && entry.pred">
+                <span *ngIf="entry.pred.predictedWinnerAbbrev === s.winnerAbbrev" class="result-correct">✓</span>
+                <span *ngIf="entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev" class="result-wrong">✗</span>
+              </span>
+              <span class="pred-pick-result" *ngIf="!s.winnerAbbrev || !entry.pred">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noSeries>
+        <div class="card pred-empty-state">
+          <p>No series data for this round yet.</p>
+        </div>
+      </ng-template>
+    </div>
+
     <!-- Roster -->
     <div class="roster-grid">
       <div

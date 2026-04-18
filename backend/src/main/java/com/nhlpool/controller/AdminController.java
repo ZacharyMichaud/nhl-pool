@@ -26,6 +26,7 @@ public class AdminController {
     private final PoolRoundRepository poolRoundRepository;
     private final SeriesRepository seriesRepository;
     private final DraftPickRepository draftPickRepository;
+    private final DraftConfigRepository draftConfigRepository;
 
     @PostMapping("/sync/rosters")
     public ResponseEntity<String> syncRosters() {
@@ -210,5 +211,23 @@ public class AdminController {
             }
         });
         return ResponseEntity.ok("All team assignments cleared");
+    }
+
+    /** Toggle the predictions-locked flag. */
+    @PostMapping("/lock/predictions")
+    public ResponseEntity<DraftConfig> togglePredictionsLock() {
+        DraftConfig cfg = draftConfigRepository.findAll().stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException("Draft config not found"));
+        cfg.setPredictionsLocked(!Boolean.TRUE.equals(cfg.getPredictionsLocked()));
+        return ResponseEntity.ok(draftConfigRepository.save(cfg));
+    }
+
+    /** Toggle the Conn Smythe locked flag. */
+    @PostMapping("/lock/conn-smythe")
+    public ResponseEntity<DraftConfig> toggleConnSmytheLock() {
+        DraftConfig cfg = draftConfigRepository.findAll().stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException("Draft config not found"));
+        cfg.setConnSmytheLocked(!Boolean.TRUE.equals(cfg.getConnSmytheLocked()));
+        return ResponseEntity.ok(draftConfigRepository.save(cfg));
     }
 }

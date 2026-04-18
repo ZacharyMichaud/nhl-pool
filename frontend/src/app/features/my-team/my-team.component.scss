@@ -258,3 +258,199 @@
   font-style: italic;
   margin: 6px 0 8px;
 }
+
+// ── Locked Predictions Section ─────────────────────────────────────────────
+.predictions-section {
+  margin-bottom: 24px;
+}
+
+.pred-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+
+  .pred-lock-icon { font-size: 22px; flex-shrink: 0; }
+}
+
+.pred-section-title {
+  margin: 0 0 2px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+
+  @media (min-width: 768px) { font-size: 18px; }
+}
+
+.pred-section-sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.pred-round-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+
+  button {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover { border-color: rgba(0,195,255,0.3); color: var(--text-primary); }
+    &.active { background: var(--accent); border-color: var(--accent); color: #000; }
+  }
+}
+
+.pred-series-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 768px) { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+}
+
+.pred-series-card {
+  padding: 14px 16px;
+  overflow: hidden;
+}
+
+.pred-matchup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pred-team-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pred-team-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.pred-team-abbrev {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.pred-vs {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex: 1;
+  text-align: center;
+}
+
+.pred-winner-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: #000;
+  background: var(--accent);
+  padding: 3px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+// Picks table
+.pred-picks-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pred-picks-header-row {
+  display: grid;
+  grid-template-columns: 1fr 60px 40px 36px;
+  padding: 4px 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.pred-pick-row {
+  display: grid;
+  grid-template-columns: 1fr 60px 40px 36px;
+  align-items: center;
+  padding: 7px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: background 0.15s;
+
+  &:hover { background: rgba(255,255,255,0.03); }
+
+  &.my-team-row {
+    background: rgba(0,195,255,0.06);
+    border: 1px solid rgba(0,195,255,0.12);
+  }
+
+  &.correct-winner .pred-pick-winner { color: #4ade80; }
+  &.wrong-winner .pred-pick-winner   { color: var(--danger, #ef4444); }
+}
+
+.pred-pick-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.you-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: #000;
+  background: var(--accent);
+  padding: 1px 5px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.pred-pick-winner {
+  font-weight: 700;
+  font-size: 13px;
+  &.pred-no-pick { color: var(--text-muted); }
+}
+
+.pred-pick-games {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.pred-pick-result {
+  text-align: center;
+}
+
+.result-correct { color: #4ade80; font-size: 14px; font-weight: 700; }
+.result-wrong   { color: var(--danger, #ef4444); font-size: 14px; font-weight: 700; }
+
+.pred-empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px;
+  font-style: italic;
+}
+

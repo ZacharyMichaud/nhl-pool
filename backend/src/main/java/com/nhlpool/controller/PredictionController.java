@@ -23,6 +23,7 @@ public class PredictionController {
     private final PoolTeamRepository poolTeamRepository;
     private final PoolRoundRepository poolRoundRepository;
     private final UserRepository userRepository;
+    private final com.nhlpool.repository.DraftConfigRepository draftConfigRepository;
 
     @GetMapping("/round/{roundNumber}")
     @Transactional(readOnly = true)
@@ -57,6 +58,13 @@ public class PredictionController {
 
         Series series = seriesRepository.findByIdWithRound(seriesId)
                 .orElseThrow(() -> new IllegalArgumentException("Series not found"));
+
+        // Check if predictions are globally locked by admin
+        draftConfigRepository.findAll().stream().findFirst().ifPresent(cfg -> {
+            if (Boolean.TRUE.equals(cfg.getPredictionsLocked())) {
+                throw new IllegalStateException("Predictions are locked by the admin");
+            }
+        });
 
         // Check if round is still accepting predictions (UPCOMING status)
         PoolRound round = series.getRound();
@@ -94,5 +102,24 @@ public class PredictionController {
     @GetMapping("/series/round/{roundNumber}")
     public ResponseEntity<List<Series>> getSeriesByRound(@PathVariable Integer roundNumber) {
         return ResponseEntity.ok(seriesRepository.findByRoundNumber(roundNumber));
+    }
+
+    /**
+     * Returns all teams' predictions for a given round.
+     * Only reveals data when predictions are locked by an admin.
+     */
+    @GetMapping("/all-teams/round/{roundNumber}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<Prediction>> getAllTeamsPredictions(@PathVariable Integer roundNumber) {
+        boolean locked = draftConfigRepository.findAll().stream()
+                .findFirst()
+                .map(cfg -> Boolean.TRUE.equals(cfg.getPredictionsLocked()))
+                .orElse(false);
+
+        if (!locked) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        return ResponseEntity.ok(predictionRepository.findByRoundNumber(roundNumber));
     }
 }

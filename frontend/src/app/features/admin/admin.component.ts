@@ -238,4 +238,24 @@ export class AdminComponent implements OnInit, OnDestroy {
       default: return 'Round ' + roundNumber;
     }
   }
+
+  togglePredictionsLock() {
+    this.api.lockPredictions().subscribe({
+      next: (cfg: any) => {
+        this.draftConfig.set(cfg);
+        this.show(cfg.predictionsLocked ? '🔒 Predictions locked' : '🔓 Predictions unlocked');
+      },
+      error: (e: any) => this.show(e.error?.error || 'Failed'),
+    });
+  }
+
+  toggleConnSmytheLock() {
+    this.api.lockConnSmythe().subscribe({
+      next: (cfg: any) => {
+        this.draftConfig.set(cfg);
+        this.show(cfg.connSmytheLocked ? '🔒 Conn Smythe locked' : '🔓 Conn Smythe unlocked');
+      },
+      error: (e: any) => this.show(e.error?.error || 'Failed'),
+    });
+  }
 }

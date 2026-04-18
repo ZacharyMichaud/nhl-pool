@@ -32,4 +32,10 @@ public class DraftConfig {
 
     @Builder.Default
     private Integer totalTeams = 5;
+
+    @Builder.Default
+    private Boolean predictionsLocked = false;
+
+    @Builder.Default
+    private Boolean connSmytheLocked = false;
 }

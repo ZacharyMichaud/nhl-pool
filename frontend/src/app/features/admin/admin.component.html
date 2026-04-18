@@ -185,5 +185,26 @@
         </div>
       </div>
     </div>
+
+    <!-- Prediction & Conn Smythe Locks -->
+    <div class="card">
+      <h2>🔒 Locks</h2>
+      <div class="lock-buttons">
+        <button
+          class="btn-lock"
+          [class.locked]="draftConfig()?.predictionsLocked"
+          (click)="togglePredictionsLock()">
+          {{ draftConfig()?.predictionsLocked ? '🔒' : '🔓' }}
+          Predictions {{ draftConfig()?.predictionsLocked ? 'Locked' : 'Unlocked' }}
+        </button>
+        <button
+          class="btn-lock"
+          [class.locked]="draftConfig()?.connSmytheLocked"
+          (click)="toggleConnSmytheLock()">
+          {{ draftConfig()?.connSmytheLocked ? '🔒' : '🔓' }}
+          Conn Smythe {{ draftConfig()?.connSmytheLocked ? 'Locked' : 'Unlocked' }}
+        </button>
+      </div>
+    </div>
   </div>
 </div>

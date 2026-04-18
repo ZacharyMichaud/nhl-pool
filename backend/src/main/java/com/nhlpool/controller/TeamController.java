@@ -17,6 +17,7 @@ import java.util.Map;
 public class TeamController {
 
     private final PoolTeamRepository poolTeamRepository;
+    private final com.nhlpool.repository.DraftConfigRepository draftConfigRepository;
 
     @GetMapping
     public ResponseEntity<List<PoolTeam>> getTeams() {
@@ -37,6 +38,12 @@ public class TeamController {
         if (user.getTeam() == null || !user.getTeam().getId().equals(id)) {
             throw new IllegalStateException("You can only set Conn Smythe for your own team");
         }
+        // Check if Conn Smythe is locked by admin
+        draftConfigRepository.findAll().stream().findFirst().ifPresent(cfg -> {
+            if (Boolean.TRUE.equals(cfg.getConnSmytheLocked())) {
+                throw new IllegalStateException("Conn Smythe predictions are locked by the admin");
+            }
+        });
         PoolTeam team = poolTeamRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Team not found"));
         team.setConnSmythePredictionPlayerId(body.get("playerId"));

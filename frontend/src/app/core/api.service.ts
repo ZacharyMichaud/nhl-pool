@@ -27,6 +27,12 @@ export class ApiService {
     return this.http.get<any[]>(`${ API }/players/search`, { params: { q } });
   }
 
+  getDraftedPlayoffStats(teamId?: number): Observable<any[]> {
+    const params: any = {};
+    if (teamId != null) params.teamId = teamId;
+    return this.http.get<any[]>(`${ API }/players/drafted-playoff-stats`, { params });
+  }
+
   // Draft
   getDraftConfig(): Observable<any> { return this.http.get(`${ API }/draft/config`); }
 
@@ -73,6 +79,10 @@ export class ApiService {
 
   submitPrediction(seriesId: number, predictedWinnerAbbrev: string, predictedGames: number): Observable<any> {
     return this.http.post(`${ API }/predictions`, { seriesId, predictedWinnerAbbrev, predictedGames });
+  }
+
+  getAllTeamsPredictions(roundNumber: number): Observable<any[]> {
+    return this.http.get<any[]>(`${ API }/predictions/all-teams/round/${ roundNumber }`);
   }
 
   // Admin
@@ -123,4 +133,8 @@ export class ApiService {
   resetDraft(): Observable<any> { return this.http.post(`${ API }/draft/reset`, {}); }
 
   updateDraftConfig(data: any): Observable<any> { return this.http.put(`${ API }/draft/config`, data); }
+
+  lockPredictions(): Observable<any> { return this.http.post(`${ API }/admin/lock/predictions`, {}); }
+
+  lockConnSmythe(): Observable<any> { return this.http.post(`${ API }/admin/lock/conn-smythe`, {}); }
 }

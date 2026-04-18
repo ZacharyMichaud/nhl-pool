@@ -1,7 +1,7 @@
 import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
+import { debounceTime, distinctUntilChanged, forkJoin, Subject, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
@@ -24,6 +24,19 @@ export class MyTeamComponent implements OnInit, OnDestroy {
   allTeams       = signal<any[]>([]);
   selectedTeamId = signal<number | null>(null);
 
+  // Predictions lock + all-team predictions state
+  predictionsLocked  = signal(false);
+  selectedPredRound  = signal(1);
+  allTeamPredictions = signal<any[]>([]);
+  seriesForRound     = signal<any[]>([]);
+
+  readonly roundOptions = [
+    { value: 1, label: 'Round 1' },
+    { value: 2, label: 'Round 2' },
+    { value: 3, label: 'Conf Finals' },
+    { value: 4, label: 'Cup Final' },
+  ];
+
   // Conn Smythe search state (only for the user's own team edit)
   csSearch       = signal('');
   csResults      = signal<any[]>([]);
@@ -44,6 +57,12 @@ export class MyTeamComponent implements OnInit, OnDestroy {
   selectedTeam = computed(() =>
     this.allTeams().find((t: any) => t.teamId === this.selectedTeamId()) ?? null
   );
+
+  /** Predictions for the currently selected team in the selected round */
+  selectedTeamPredictions = computed(() => {
+    const teamId = this.selectedTeamId();
+    return this.allTeamPredictions().filter((p: any) => p.team?.id === teamId);
+  });
 
   private outsideClickHandler = (e: MouseEvent) => {
     if (!this.el.nativeElement.contains(e.target)) { /* handled inside component */ }
@@ -66,7 +85,10 @@ export class MyTeamComponent implements OnInit, OnDestroy {
   ngOnDestroy() {}
 
   loadTeams() {
-    this.api.getStandings().subscribe((standings) => {
+    forkJoin({
+      standings: this.api.getStandings(),
+      config: this.api.getDraftConfig(),
+    }).subscribe(({ standings, config }) => {
       this.allTeams.set(standings);
       const myId = this.auth.teamId();
       const mine = standings.find((s: any) => s.teamId === myId);
@@ -76,6 +98,30 @@ export class MyTeamComponent implements OnInit, OnDestroy {
       if (mine?.connSmythePlayerName) {
         this.csSearch.set(mine.connSmythePlayerName);
       }
+
+      const locked = Boolean(config?.predictionsLocked);
+      this.predictionsLocked.set(locked);
+
+      if (locked) {
+        this.loadPredictionsForRound(this.selectedPredRound());
+      }
+    });
+  }
+
+  selectRound(round: number) {
+    this.selectedPredRound.set(round);
+    if (this.predictionsLocked()) {
+      this.loadPredictionsForRound(round);
+    }
+  }
+
+  private loadPredictionsForRound(round: number) {
+    forkJoin({
+      preds: this.api.getAllTeamsPredictions(round),
+      series: this.api.getSeries(round),
+    }).subscribe(({ preds, series }) => {
+      this.allTeamPredictions.set(preds);
+      this.seriesForRound.set(series);
     });
   }
 
@@ -119,5 +165,16 @@ export class MyTeamComponent implements OnInit, OnDestroy {
 
   closeCsDropdown() {
     setTimeout(() => this.csShowDropdown.set(false), 150);
+  }
+
+  /** For a given series, find ALL teams' predictions, ordered by team list */
+  getAllPredsForSeries(seriesId: number): { teamId: number; teamName: string; pred: any }[] {
+    return this.allTeams().map(team => ({
+      teamId: team.teamId,
+      teamName: team.teamName,
+      pred: this.allTeamPredictions().find(
+        (p: any) => p.series?.id === seriesId && p.team?.id === team.teamId
+      ) ?? null,
+    }));
   }
 }
