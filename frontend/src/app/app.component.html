@@ -3,18 +3,21 @@
     <div class="nav-content">
 
       <!-- Brand -->
-      <a routerLink="/" class="brand" (click)="closeMenu()">
+      <a routerLink="/" class="brand">
         <span class="brand-icon">🏒</span>
         <span class="brand-text">NHL Pool</span>
       </a>
 
       <!-- Desktop links -->
       <div class="nav-links">
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Dashboard</a>
-        <a routerLink="/draft"         routerLinkActive="active">Draft</a>
-        <a routerLink="/my-team"       routerLinkActive="active">Teams</a>
-        <a routerLink="/standings"     routerLinkActive="active">Standings</a>
-        <a routerLink="/predictions"   routerLinkActive="active">Predictions</a>
+        <a routerLink="/"        routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Standings</a>
+        <a routerLink="/series"  routerLinkActive="active">Series</a>
+        <a routerLink="/players" routerLinkActive="active">Players</a>
+        <a routerLink="/teams"   routerLinkActive="active">Teams</a>
+        <a *ngIf="!draftCompleted()"
+           routerLink="/draft"
+           routerLinkActive="active"
+           [class.highlight]="draftActive()">Draft</a>
         <a *ngIf="auth.isAdmin()" routerLink="/admin" routerLinkActive="active" class="admin-link">Admin</a>
       </div>
 
@@ -24,41 +27,15 @@
         <button class="btn-logout" (click)="auth.logout()">Logout</button>
       </div>
 
-      <!-- Mobile: hamburger -->
-      <button class="hamburger" (click)="toggleMenu()" [class.open]="menuOpen()" aria-label="Toggle menu">
-        <span></span><span></span><span></span>
-      </button>
-
     </div>
   </nav>
-
-  <!-- Mobile drawer -->
-  <div class="mobile-drawer" [class.open]="menuOpen()" (click)="closeMenu()">
-    <div class="drawer-inner" (click)="$event.stopPropagation()">
-
-      <div class="drawer-user">
-        <span class="drawer-avatar">{{ auth.user()?.displayName?.charAt(0)?.toUpperCase() }}</span>
-        <div>
-          <div class="drawer-name">{{ auth.user()?.displayName }}</div>
-          <div class="drawer-role">{{ auth.isAdmin() ? 'Admin' : 'Member' }}</div>
-        </div>
-      </div>
-
-      <nav class="drawer-links">
-        <a routerLink="/"            routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" (click)="closeMenu()">🏠 Dashboard</a>
-        <a routerLink="/draft"       routerLinkActive="active" (click)="closeMenu()">📋 Draft</a>
-        <a routerLink="/my-team"     routerLinkActive="active" (click)="closeMenu()">👥 Teams</a>
-        <a routerLink="/standings"   routerLinkActive="active" (click)="closeMenu()">🏆 Standings</a>
-        <a routerLink="/predictions" routerLinkActive="active" (click)="closeMenu()">🎯 Predictions</a>
-        <a *ngIf="auth.isAdmin()" routerLink="/admin" routerLinkActive="active" (click)="closeMenu()" class="admin-link">⚙️ Admin</a>
-      </nav>
-
-      <button class="drawer-logout" (click)="auth.logout()">Logout</button>
-    </div>
-  </div>
-
-  <!-- Backdrop -->
-  <div class="drawer-backdrop" [class.visible]="menuOpen()" (click)="closeMenu()"></div>
 </ng-container>
 
 <router-outlet />
+
+<!-- Mobile bottom nav -->
+<app-mobile-nav
+  *ngIf="auth.isLoggedIn()"
+  [draftActive]="draftActive()"
+  [draftCompleted]="draftCompleted()"
+  [isAdmin]="auth.isAdmin()" />

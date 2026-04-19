@@ -1,0 +1,286 @@
+$mobile: 768px;
+
+// ── Round dropdown ────────────────────────────────────────────────────────────
+.round-dropdown-row {
+  margin-bottom: 20px;
+  max-width: 220px;
+}
+
+// ── Series grid ───────────────────────────────────────────────────────────────
+.series-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 600px)  { grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 1100px) { grid-template-columns: repeat(4, 1fr); }
+}
+
+.series-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+// ── Status bar ────────────────────────────────────────────────────────────────
+.series-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+
+  &.complete {
+    color: var(--gold);
+    background: rgba(251, 191, 36, 0.06);
+    border-bottom-color: rgba(251, 191, 36, 0.15);
+  }
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+
+  &.active {
+    background: #4ade80;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.6);
+    animation: dot-pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+// ── Matchup row ───────────────────────────────────────────────────────────────
+.matchup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 14px;
+  gap: 8px;
+}
+
+.team-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  opacity: 0.65;
+  transition: opacity 0.2s;
+
+  &.winner { opacity: 1; }
+  &.loser  { opacity: 0.3; }
+  &.right  { align-items: center; }
+}
+
+.team-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+
+  @media (min-width: $mobile) { width: 40px; height: 40px; }
+}
+
+.team-abbrev {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.score-block {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.score {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--text-primary);
+
+  @media (min-width: $mobile) { font-size: 32px; }
+}
+
+.score-sep {
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--text-muted);
+}
+
+// ── Divider ───────────────────────────────────────────────────────────────────
+.card-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0;
+}
+
+// ── Locked predictions table ───────────────────────────────────────────────────
+.picks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 0;
+}
+
+.pick-row {
+  display: grid;
+  grid-template-columns: 1fr 44px 34px 24px;
+  align-items: center;
+  padding: 7px 14px;
+  font-size: 12px;
+  transition: background 0.12s;
+  gap: 4px;
+
+  &:hover { background: rgba(255,255,255,0.03); }
+
+  &.my-row {
+    background: rgba(0, 195, 255, 0.07);
+    border-left: 3px solid var(--accent);
+    padding-left: 11px;
+  }
+
+  &.correct .pick-winner { color: #4ade80; }
+  &.wrong   .pick-winner { color: var(--danger); }
+}
+
+.pick-team-name {
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pick-winner {
+  font-weight: 700;
+  font-size: 12px;
+  text-align: center;
+
+  &.no-pick { color: var(--text-muted); }
+}
+
+.pick-games {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.pick-result {
+  text-align: center;
+  &.muted { color: var(--text-muted); font-size: 11px; }
+}
+
+.mark {
+  font-size: 13px;
+  font-weight: 700;
+  &.correct-mark { color: #4ade80; }
+  &.wrong-mark   { color: var(--danger); }
+}
+
+// ── Entry form ────────────────────────────────────────────────────────────────
+.entry-form {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.entry-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.entry-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+// ── Series complete (your pick summary) ───────────────────────────────────────
+.your-pick {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--bg-secondary);
+}
+
+.pick-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+}
+
+.pick-val {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.no-pick-msg {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+
+  .empty-icon { font-size: 36px; display: block; margin-bottom: 12px; }
+  p { color: var(--text-muted); margin: 0 0 6px; }
+  .empty-sub { font-size: 12px; }
+}
+
+// ── Save bar ──────────────────────────────────────────────────────────────────
+.save-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 0 0;
+}
+
+.btn-save {
+  background: linear-gradient(135deg, var(--accent) 0%, #0088cc 100%);
+  color: #000;
+  border: none;
+  padding: 11px 28px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0, 195, 255, 0.4);
+  }
+
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}

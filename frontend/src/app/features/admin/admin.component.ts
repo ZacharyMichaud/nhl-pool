@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { RouterLink } from '@angular/router';
 import { catchError, EMPTY } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
@@ -13,7 +14,7 @@ import { DropdownOption } from '../../shared/components/dropdown/dropdown.types'
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSnackBarModule, DropdownComponent],
+  imports: [CommonModule, FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSnackBarModule, DropdownComponent, RouterLink],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss',
 })

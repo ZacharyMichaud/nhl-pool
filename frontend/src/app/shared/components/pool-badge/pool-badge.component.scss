@@ -1,0 +1,20 @@
+// Pool-team colour palette (mirrors the $colors list in the app's theme)
+$colors: (#00c3ff, #ff6b6b, #ffd166, #06d6a0, #a78bfa, #fb923c, #f472b6, #34d399, #60a5fa, #fbbf24);
+
+.pool-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+// Generate badge-0 … badge-9
+@for $i from 0 through 9 {
+  .badge-#{$i} {
+    background: rgba(nth($colors, $i + 1), 0.15);
+    color: nth($colors, $i + 1);
+  }
+}

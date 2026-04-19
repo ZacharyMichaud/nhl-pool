@@ -102,6 +102,11 @@ a {
   @media (min-width: 768px) {
     padding: 24px;
   }
+
+  // Clear the mobile bottom nav bar
+  @media (max-width: 767px) {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .page-header {

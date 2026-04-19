@@ -4,7 +4,6 @@ import com.nhlpool.domain.Player;
 import com.nhlpool.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -32,9 +31,9 @@ public class PlayerSyncService {
     }
 
     /**
-     * Sync stats for all drafted players every 5 minutes
+     * Sync stats for all drafted players.
+     * Called by PlayoffSchedulerService after a game ends (and optionally after each goal).
      */
-    @Scheduled(fixedRate = 300_000, initialDelay = 60_000)
     public void syncDraftedPlayerStats() {
         List<Player> draftedPlayers = playerRepository.findByDraftedTrue();
         if (draftedPlayers.isEmpty()) return;

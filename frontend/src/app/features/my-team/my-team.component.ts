@@ -1,12 +1,41 @@
 import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { debounceTime, distinctUntilChanged, forkJoin, Subject, switchMap } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
+import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+
+/** Primary colors for each NHL team, keyed by 3-letter abbreviation. */
+const NHL_TEAM_COLORS: Record<string, { bg: string; light: boolean }> = {
+  ANA: { bg: '#F47A38', light: false }, ARI: { bg: '#8C2633', light: true  },
+  BOS: { bg: '#FFB81C', light: false }, BUF: { bg: '#003087', light: true  },
+  CGY: { bg: '#C8102E', light: true  }, CAR: { bg: '#CC0000', light: true  },
+  CHI: { bg: '#CF0A2C', light: true  }, COL: { bg: '#6F263D', light: true  },
+  CBJ: { bg: '#002654', light: true  }, DAL: { bg: '#006847', light: true  },
+  DET: { bg: '#CE1126', light: true  }, EDM: { bg: '#FF4C00', light: false },
+  FLA: { bg: '#041E42', light: true  }, LAK: { bg: '#111111', light: true  },
+  MIN: { bg: '#154734', light: true  }, MTL: { bg: '#AF1E2D', light: true  },
+  NSH: { bg: '#FFB81C', light: false }, NJD: { bg: '#CE1126', light: true  },
+  NYI: { bg: '#00539B', light: true  }, NYR: { bg: '#0038A8', light: true  },
+  OTT: { bg: '#C52032', light: true  }, PHI: { bg: '#F74902', light: false },
+  PIT: { bg: '#FCB514', light: false }, SEA: { bg: '#001628', light: true  },
+  SJS: { bg: '#006D75', light: true  }, STL: { bg: '#002F87', light: true  },
+  TBL: { bg: '#002868', light: true  }, TOR: { bg: '#003E7E', light: true  },
+  UTA: { bg: '#71AFE5', light: false }, VAN: { bg: '#00843D', light: true  },
+  VGK: { bg: '#B4975A', light: false }, WSH: { bg: '#CF0A2C', light: true  },
+  WPG: { bg: '#041E42', light: true  },
+};
+
+/** Distinct accent colors for pool teams (assigned by index in standings). */
+const POOL_TEAM_PALETTE = [
+  '#00C3FF', '#FF6B6B', '#FFD166', '#06D6A0', '#A78BFA',
+  '#FB923C', '#F472B6', '#34D399', '#60A5FA', '#FBBF24',
+  '#E879F9', '#4ADE80',
+];
 
 @Component({
   selector: 'app-my-team',
@@ -16,28 +45,17 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
   styleUrl: './my-team.component.scss',
 })
 export class MyTeamComponent implements OnInit, OnDestroy {
-  private api       = inject(ApiService);
-  private el        = inject(ElementRef);
-  private snackBar  = inject(MatSnackBar);
-  protected auth    = inject(AuthService);
+  private api      = inject(ApiService);
+  private el       = inject(ElementRef);
+  private snackBar = inject(MatSnackBar);
+  private route    = inject(ActivatedRoute);
+  protected auth   = inject(AuthService);
 
+  // ── Teams ─────────────────────────────────────────────────────────────────
   allTeams       = signal<any[]>([]);
   selectedTeamId = signal<number | null>(null);
 
-  // Predictions lock + all-team predictions state
-  predictionsLocked  = signal(false);
-  selectedPredRound  = signal(1);
-  allTeamPredictions = signal<any[]>([]);
-  seriesForRound     = signal<any[]>([]);
-
-  readonly roundOptions = [
-    { value: 1, label: 'Round 1' },
-    { value: 2, label: 'Round 2' },
-    { value: 3, label: 'Conf Finals' },
-    { value: 4, label: 'Cup Final' },
-  ];
-
-  // Conn Smythe search state (only for the user's own team edit)
+  // ── Conn Smythe search ────────────────────────────────────────────────────
   csSearch       = signal('');
   csResults      = signal<any[]>([]);
   csSaving       = signal(false);
@@ -45,6 +63,7 @@ export class MyTeamComponent implements OnInit, OnDestroy {
 
   private searchSubject = new Subject<string>();
 
+  // ── Computed ──────────────────────────────────────────────────────────────
   teamOptions = computed<DropdownOption[]>(() =>
     this.allTeams().map(t => ({
       value:    t.teamId,
@@ -58,20 +77,25 @@ export class MyTeamComponent implements OnInit, OnDestroy {
     this.allTeams().find((t: any) => t.teamId === this.selectedTeamId()) ?? null
   );
 
-  /** Predictions for the currently selected team in the selected round */
-  selectedTeamPredictions = computed(() => {
-    const teamId = this.selectedTeamId();
-    return this.allTeamPredictions().filter((p: any) => p.team?.id === teamId);
+  /** Maps teamId → palette color, stable across renders. */
+  teamColorMap = computed<Record<number, string>>(() => {
+    const map: Record<number, string> = {};
+    this.allTeams().forEach((t: any, i: number) => {
+      map[t.teamId] = POOL_TEAM_PALETTE[i % POOL_TEAM_PALETTE.length];
+    });
+    return map;
   });
 
-  private outsideClickHandler = (e: MouseEvent) => {
-    if (!this.el.nativeElement.contains(e.target)) { /* handled inside component */ }
-  };
+  getPoolTeamColor(teamId: number): string {
+    return this.teamColorMap()[teamId] ?? '#00C3FF';
+  }
 
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
   ngOnInit() {
-    this.loadTeams();
+    // Read optional teamId query param (e.g. navigated from Standings)
+    const paramTeamId = this.route.snapshot.queryParamMap.get('teamId');
+    this.loadTeams(paramTeamId ? Number(paramTeamId) : null);
 
-    // Debounced player search
     this.searchSubject.pipe(
       debounceTime(300),
       distinctUntilChanged(),
@@ -84,44 +108,23 @@ export class MyTeamComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {}
 
-  loadTeams() {
-    forkJoin({
-      standings: this.api.getStandings(),
-      config: this.api.getDraftConfig(),
-    }).subscribe(({ standings, config }) => {
+  // ── Data loading ──────────────────────────────────────────────────────────
+  loadTeams(preselectedTeamId: number | null = null) {
+    this.api.getStandings().subscribe(standings => {
       this.allTeams.set(standings);
       const myId = this.auth.teamId();
-      const mine = standings.find((s: any) => s.teamId === myId);
-      this.selectedTeamId.set(mine?.teamId ?? standings[0]?.teamId ?? null);
-
-      // Pre-fill the search box with the current CS pick for the user's team
-      if (mine?.connSmythePlayerName) {
-        this.csSearch.set(mine.connSmythePlayerName);
+      // Priority: query-param team → my team → first team
+      const target =
+        (preselectedTeamId != null && standings.find((s: any) => s.teamId === preselectedTeamId))
+          ? preselectedTeamId
+          : standings.find((s: any) => s.teamId === myId)?.teamId
+          ?? standings[0]?.teamId
+          ?? null;
+      this.selectedTeamId.set(target);
+      const selected = standings.find((s: any) => s.teamId === target);
+      if (selected?.connSmythePlayerName) {
+        this.csSearch.set(selected.connSmythePlayerName);
       }
-
-      const locked = Boolean(config?.predictionsLocked);
-      this.predictionsLocked.set(locked);
-
-      if (locked) {
-        this.loadPredictionsForRound(this.selectedPredRound());
-      }
-    });
-  }
-
-  selectRound(round: number) {
-    this.selectedPredRound.set(round);
-    if (this.predictionsLocked()) {
-      this.loadPredictionsForRound(round);
-    }
-  }
-
-  private loadPredictionsForRound(round: number) {
-    forkJoin({
-      preds: this.api.getAllTeamsPredictions(round),
-      series: this.api.getSeries(round),
-    }).subscribe(({ preds, series }) => {
-      this.allTeamPredictions.set(preds);
-      this.seriesForRound.set(series);
     });
   }
 
@@ -133,6 +136,16 @@ export class MyTeamComponent implements OnInit, OnDestroy {
     return this.auth.teamId() === teamId;
   }
 
+  // ── NHL team color helpers (kept for template use) ────────────────────────
+  getTeamColor(abbrev: string): string {
+    return NHL_TEAM_COLORS[abbrev?.toUpperCase()]?.bg ?? '#1e2530';
+  }
+
+  getTeamTextColor(abbrev: string): string {
+    return NHL_TEAM_COLORS[abbrev?.toUpperCase()]?.light ? '#ffffff' : '#000000';
+  }
+
+  // ── Conn Smythe ───────────────────────────────────────────────────────────
   onCsSearchInput(value: string) {
     this.csSearch.set(value);
     if (value.trim().length < 2) {
@@ -165,16 +178,5 @@ export class MyTeamComponent implements OnInit, OnDestroy {
 
   closeCsDropdown() {
     setTimeout(() => this.csShowDropdown.set(false), 150);
-  }
-
-  /** For a given series, find ALL teams' predictions, ordered by team list */
-  getAllPredsForSeries(seriesId: number): { teamId: number; teamName: string; pred: any }[] {
-    return this.allTeams().map(team => ({
-      teamId: team.teamId,
-      teamName: team.teamName,
-      pred: this.allTeamPredictions().find(
-        (p: any) => p.series?.id === seriesId && p.team?.id === team.teamId
-      ) ?? null,
-    }));
   }
 }

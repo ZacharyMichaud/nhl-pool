@@ -1,8 +1,4 @@
 <div class="page-container">
-  <div class="page-header">
-    <h1>Teams</h1>
-    <p>Drafted rosters and live playoff stats</p>
-  </div>
 
   <!-- Team Selector -->
   <div class="team-select-row" *ngIf="allTeams().length > 0">
@@ -44,149 +40,7 @@
       </div>
     </div>
 
-    <!-- Conn Smythe Section -->
-    <div class="conn-smythe-section card">
-      <div class="cs-header">
-        <span class="cs-trophy">🏆</span>
-        <div class="cs-title-block">
-          <span class="cs-title">Conn Smythe Prediction</span>
-          <span class="cs-subtitle">Playoff MVP pick</span>
-        </div>
-      </div>
-
-      <!-- Editable input: only for the user's own team -->
-      <ng-container *ngIf="isMyTeam(selectedTeam()?.teamId)">
-        <div class="cs-search-wrap">
-          <div class="cs-input-row">
-            <input
-              class="cs-input"
-              type="text"
-              placeholder="Search for a player…"
-              [value]="csSearch()"
-              (input)="onCsSearchInput($any($event.target).value)"
-              (blur)="closeCsDropdown()"
-              autocomplete="off"
-            />
-            <span class="cs-saving" *ngIf="csSaving()">⏳</span>
-          </div>
-          <div class="cs-results" *ngIf="csShowDropdown() && csResults().length > 0">
-            <div
-              *ngFor="let p of csResults()"
-              class="cs-result-row"
-              (mousedown)="pickCsPlayer(p)">
-              <img [src]="p.headshotUrl" class="cs-result-headshot" onerror="this.style.display='none'">
-              <div class="cs-result-info">
-                <span class="cs-result-name">{{ p.fullName }}</span>
-                <span class="cs-result-meta">{{ p.position }} · {{ p.teamAbbrev }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <p class="cs-hint" *ngIf="!selectedTeam()?.connSmythePlayerName">No pick set yet — search above to choose a player.</p>
-      </ng-container>
-
-      <!-- Read-only display: all teams -->
-      <div class="cs-pick-display" [class.cs-no-pick]="!selectedTeam()?.connSmythePlayerName">
-        <ng-container *ngIf="selectedTeam()?.connSmythePlayerName; else noCsPick">
-          <span class="cs-pick-label">Current Pick:</span>
-          <span class="cs-pick-name">{{ selectedTeam()?.connSmythePlayerName }}</span>
-        </ng-container>
-        <ng-template #noCsPick>
-          <span class="cs-pick-empty" *ngIf="!isMyTeam(selectedTeam()?.teamId)">No pick yet</span>
-        </ng-template>
-      </div>
-    </div>
-
-    <!-- ── Predictions Section (only shown when locked) ─────────────────────── -->
-    <div class="predictions-section" *ngIf="predictionsLocked()">
-      <div class="pred-section-header">
-        <span class="pred-lock-icon">🔒</span>
-        <div>
-          <h3 class="pred-section-title">Locked Predictions</h3>
-          <p class="pred-section-sub">All teams' picks are now visible</p>
-        </div>
-      </div>
-
-      <!-- Round tabs -->
-      <div class="pred-round-tabs">
-        <button
-          *ngFor="let r of roundOptions"
-          [class.active]="selectedPredRound() === r.value"
-          (click)="selectRound(r.value)">
-          {{ r.label }}
-        </button>
-      </div>
-
-      <!-- Series cards -->
-      <div class="pred-series-list" *ngIf="seriesForRound().length > 0; else noSeries">
-        <div class="pred-series-card card" *ngFor="let s of seriesForRound()">
-
-          <!-- Matchup header -->
-          <div class="pred-matchup-header">
-            <div class="pred-team-logo-wrap">
-              <img [src]="s.topSeedLogoUrl" class="pred-team-logo" onerror="this.style.display='none'">
-              <span class="pred-team-abbrev">{{ s.topSeedAbbrev }}</span>
-            </div>
-            <span class="pred-vs">vs</span>
-            <div class="pred-team-logo-wrap">
-              <img [src]="s.bottomSeedLogoUrl" class="pred-team-logo" onerror="this.style.display='none'">
-              <span class="pred-team-abbrev">{{ s.bottomSeedAbbrev }}</span>
-            </div>
-            <div class="pred-winner-badge" *ngIf="s.winnerAbbrev">
-              🏆 {{ s.winnerAbbrev }}
-            </div>
-          </div>
-
-          <!-- All teams' picks for this series -->
-          <div class="pred-picks-table">
-            <div class="pred-picks-header-row">
-              <span class="pred-pick-team-label">Team</span>
-              <span class="pred-pick-winner-label">Pick</span>
-              <span class="pred-pick-games-label">In</span>
-              <span class="pred-pick-result-label">Result</span>
-            </div>
-            <div
-              class="pred-pick-row"
-              *ngFor="let entry of getAllPredsForSeries(s.id)"
-              [class.my-team-row]="isMyTeam(entry.teamId)"
-              [class.correct-winner]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
-              [class.wrong-winner]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">
-
-              <span class="pred-pick-team">
-                {{ entry.teamName }}
-                <span class="you-badge" *ngIf="isMyTeam(entry.teamId)">You</span>
-              </span>
-
-              <span class="pred-pick-winner" *ngIf="entry.pred; else noPred">
-                {{ entry.pred.predictedWinnerAbbrev }}
-              </span>
-              <ng-template #noPred>
-                <span class="pred-pick-winner pred-no-pick">—</span>
-              </ng-template>
-
-              <span class="pred-pick-games" *ngIf="entry.pred">
-                {{ entry.pred.predictedGames }}G
-              </span>
-              <span class="pred-pick-games" *ngIf="!entry.pred">—</span>
-
-              <span class="pred-pick-result" *ngIf="s.winnerAbbrev && entry.pred">
-                <span *ngIf="entry.pred.predictedWinnerAbbrev === s.winnerAbbrev" class="result-correct">✓</span>
-                <span *ngIf="entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev" class="result-wrong">✗</span>
-              </span>
-              <span class="pred-pick-result" *ngIf="!s.winnerAbbrev || !entry.pred">—</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <ng-template #noSeries>
-        <div class="card pred-empty-state">
-          <p>No series data for this round yet.</p>
-        </div>
-      </ng-template>
-    </div>
-
-    <!-- Roster -->
+    <!-- Roster + Conn Smythe -->
     <div class="roster-grid">
       <div
         *ngFor="let ps of selectedTeam()?.playerScores || []"
@@ -203,6 +57,63 @@
           <div class="pc-stat"><span class="val">{{ ps.assists }}</span><span class="lbl">A</span></div>
           <div class="pc-stat"><span class="val">{{ ps.gamesPlayed }}</span><span class="lbl">GP</span></div>
           <div class="pc-stat highlight"><span class="val">{{ ps.points }}</span><span class="lbl">PTS</span></div>
+        </div>
+      </div>
+
+      <!-- Conn Smythe Card -->
+      <div class="player-card cs-player-card">
+        <div class="cs-pc-headshot-wrap">
+          <img
+            *ngIf="selectedTeam()?.connSmytheHeadshotUrl"
+            [src]="selectedTeam()?.connSmytheHeadshotUrl"
+            class="pc-headshot"
+            loading="lazy"
+            onerror="this.style.display='none'">
+          <span *ngIf="!selectedTeam()?.connSmytheHeadshotUrl" class="cs-pc-trophy">🏆</span>
+        </div>
+
+        <div class="pc-body cs-pc-body">
+          <div class="cs-pc-title-row">
+            <span class="pc-name">Conn Smythe</span>
+            <span class="cs-pc-badge">MVP Pick</span>
+          </div>
+
+          <!-- Own team: editable search -->
+          <ng-container *ngIf="isMyTeam(selectedTeam()?.teamId)">
+            <div class="cs-search-wrap">
+              <div class="cs-input-row">
+                <input
+                  class="cs-input"
+                  type="text"
+                  placeholder="Search player…"
+                  [value]="csSearch()"
+                  (input)="onCsSearchInput($any($event.target).value)"
+                  (blur)="closeCsDropdown()"
+                  autocomplete="off"
+                />
+                <span class="cs-saving" *ngIf="csSaving()">⏳</span>
+              </div>
+              <div class="cs-results" *ngIf="csShowDropdown() && csResults().length > 0">
+                <div
+                  *ngFor="let p of csResults()"
+                  class="cs-result-row"
+                  (mousedown)="pickCsPlayer(p)">
+                  <img [src]="p.headshotUrl" class="cs-result-headshot" onerror="this.style.display='none'">
+                  <div class="cs-result-info">
+                    <span class="cs-result-name">{{ p.fullName }}</span>
+                    <span class="cs-result-meta">{{ p.position }} · {{ p.teamAbbrev }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <span class="pc-meta" *ngIf="!selectedTeam()?.connSmythePlayerName">No pick yet</span>
+          </ng-container>
+
+          <!-- Other teams: read-only -->
+          <ng-container *ngIf="!isMyTeam(selectedTeam()?.teamId)">
+            <span class="pc-meta" *ngIf="selectedTeam()?.connSmythePlayerName">{{ selectedTeam()?.connSmythePlayerName }}</span>
+            <span class="pc-meta cs-no-pick-text" *ngIf="!selectedTeam()?.connSmythePlayerName">No pick yet</span>
+          </ng-container>
         </div>
       </div>
     </div>

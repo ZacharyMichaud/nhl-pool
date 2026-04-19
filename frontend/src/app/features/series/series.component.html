@@ -1,0 +1,121 @@
+<div class="page-container">
+  <!-- Round selector dropdown -->
+  <div class="round-dropdown-row">
+    <app-dropdown
+      id="series-round-select"
+      [options]="roundDropdownOptions"
+      [value]="selectedRound()"
+      (valueChange)="selectRound($event)"
+      placeholder="Select round…">
+    </app-dropdown>
+  </div>
+
+  <!-- Series grid -->
+  <div class="series-grid" *ngIf="series().length > 0; else noSeries">
+    <div *ngFor="let s of series()" class="series-card card">
+
+      <!-- Status bar -->
+      <div class="series-status" [class.complete]="s.winnerAbbrev">
+        <span class="status-dot" [class.active]="!s.winnerAbbrev"></span>
+        <span>{{ s.winnerAbbrev ? ('🏆 ' + s.winnerAbbrev + ' wins') : 'In Progress' }}</span>
+      </div>
+
+      <!-- Matchup scores -->
+      <div class="matchup">
+        <div class="team-side" [class.winner]="s.winnerAbbrev === s.topSeedAbbrev" [class.loser]="s.winnerAbbrev && s.winnerAbbrev !== s.topSeedAbbrev">
+          <img [src]="s.topSeedLogoUrl" class="team-logo" onerror="this.style.display='none'">
+          <span class="team-abbrev">{{ s.topSeedAbbrev }}</span>
+        </div>
+        <div class="score-block">
+          <span class="score">{{ s.topSeedWins }}</span>
+          <span class="score-sep">–</span>
+          <span class="score">{{ s.bottomSeedWins }}</span>
+        </div>
+        <div class="team-side right" [class.winner]="s.winnerAbbrev === s.bottomSeedAbbrev" [class.loser]="s.winnerAbbrev && s.winnerAbbrev !== s.bottomSeedAbbrev">
+          <span class="team-abbrev">{{ s.bottomSeedAbbrev }}</span>
+          <img [src]="s.bottomSeedLogoUrl" class="team-logo" onerror="this.style.display='none'">
+        </div>
+      </div>
+
+      <div class="card-divider"></div>
+
+      <!-- LOCKED: predictions comparison table -->
+      <ng-container *ngIf="predictionsLocked(); else entryForm">
+        <div class="picks-list">
+          <div *ngFor="let entry of getAllPredsForSeries(s.id)"
+               class="pick-row"
+               [class.my-row]="isMyTeam(entry.teamId)"
+               [class.correct]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
+               [class.wrong]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">
+            <span class="pick-team-name">{{ entry.teamName }}</span>
+            <span class="pick-winner" *ngIf="entry.pred">{{ entry.pred.predictedWinnerAbbrev }}</span>
+            <span class="pick-winner no-pick" *ngIf="!entry.pred">—</span>
+            <span class="pick-games" *ngIf="entry.pred">{{ entry.pred.predictedGames }}G</span>
+            <span class="pick-games" *ngIf="!entry.pred">—</span>
+            <span class="pick-result" *ngIf="s.winnerAbbrev && entry.pred">
+              <span class="mark correct-mark" *ngIf="entry.pred.predictedWinnerAbbrev === s.winnerAbbrev">✓</span>
+              <span class="mark wrong-mark"   *ngIf="entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">✗</span>
+            </span>
+            <span class="pick-result muted" *ngIf="!s.winnerAbbrev || !entry.pred">—</span>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- UNLOCKED: entry form -->
+      <ng-template #entryForm>
+        <ng-container *ngIf="!s.winnerAbbrev; else seriesDone">
+          <div class="entry-form">
+            <div class="entry-field">
+              <label class="entry-label">Pick Winner</label>
+              <app-dropdown
+                [options]="getWinnerOptions(s)"
+                [value]="predictionDraft()[s.id]?.winner"
+                (valueChange)="onWinnerChange(s.id, $event)"
+                placeholder="Choose team…">
+              </app-dropdown>
+            </div>
+            <div class="entry-field">
+              <label class="entry-label">In</label>
+              <app-dropdown
+                [options]="gameOptions"
+                [value]="predictionDraft()[s.id]?.games"
+                (valueChange)="onGamesChange(s.id, $event)"
+                placeholder="# games">
+              </app-dropdown>
+            </div>
+          </div>
+        </ng-container>
+
+        <ng-template #seriesDone>
+          <div class="your-pick" *ngIf="predictionDraft()[s.id]?.winner; else noPick">
+            <span class="pick-label">Your pick</span>
+            <span class="pick-val">{{ predictionDraft()[s.id]?.winner }} in {{ predictionDraft()[s.id]?.games }}G</span>
+          </div>
+          <ng-template #noPick>
+            <p class="no-pick-msg">No prediction made</p>
+          </ng-template>
+        </ng-template>
+      </ng-template>
+
+    </div>
+  </div>
+
+  <ng-template #noSeries>
+    <div class="card empty-state">
+      <span class="empty-icon">📅</span>
+      <p>No series data for this round yet.</p>
+      <p class="empty-sub">Ask an admin to sync the bracket.</p>
+    </div>
+  </ng-template>
+
+  <!-- Save bar — only when unlocked and series exist -->
+  <div class="save-bar" *ngIf="!predictionsLocked() && series().length > 0">
+    <button class="btn-save"
+            id="series-save-btn"
+            (click)="saveAll()"
+            [disabled]="!hasAnyPrediction || saving()">
+      <span *ngIf="saving()">⏳ Saving…</span>
+      <span *ngIf="!saving()">💾 Save Predictions</span>
+    </button>
+  </div>
+</div>

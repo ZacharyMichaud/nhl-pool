@@ -38,6 +38,25 @@ h3 {
   margin: 0 0 12px;
 }
 
+.btn-draft-board {
+  display: inline-block;
+  margin-bottom: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: rgba(0, 195, 255, 0.1);
+  border: 1px solid rgba(0, 195, 255, 0.25);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(0, 195, 255, 0.18);
+    transform: translateX(2px);
+  }
+}
+
 .team-create {
   display: flex;
   flex-wrap: wrap;

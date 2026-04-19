@@ -1,8 +1,4 @@
 <div class="page-container">
-  <div class="page-header">
-    <h1>Admin Panel</h1>
-    <p>Manage pool settings, sync data, and control the draft</p>
-  </div>
 
   <div class="admin-grid">
     <!-- Sync Actions -->
@@ -14,38 +10,6 @@
         <button class="btn-primary" (click)="syncStats()">Sync Drafted Stats</button>
         <button class="btn-primary" (click)="syncSeries()">Sync Series/Bracket</button>
       </div>
-    </div>
-
-    <!-- Draft Control -->
-    <div class="card">
-      <h2>📋 Draft Control</h2>
-      <p class="status">Status: <strong>{{ draftConfig()?.status }}</strong></p>
-      <ng-container *ngIf="draftConfig()?.status === 'NOT_STARTED'; else draftActive">
-        <mat-form-field appearance="outline">
-          <mat-label>Players per team</mat-label>
-          <input matInput type="number" [(ngModel)]="playersPerTeam">
-        </mat-form-field>
-
-        <label class="field-label">Draft order (select teams in order)</label>
-        <app-dropdown
-          [options]="teamDropdownOptions()"
-          [value]="draftOrderTeamIds"
-          [multiple]="true"
-          (valueChange)="draftOrderTeamIds = $event"
-          placeholder="Select teams in order…">
-        </app-dropdown>
-
-        <div class="action-buttons" style="margin-top: 12px;">
-          <button class="btn-primary" (click)="saveDraftConfig()">Save Config</button>
-          <button class="btn-primary" (click)="startDraft()">Start Draft</button>
-        </div>
-      </ng-container>
-      <ng-template #draftActive>
-        <p *ngIf="draftConfig()?.status === 'IN_PROGRESS'">Current pick: <strong>#{{ draftConfig()?.currentPickNumber }}</strong></p>
-        <div class="action-buttons">
-          <button class="btn-primary danger" (click)="resetDraft()">↩ Reset Draft</button>
-        </div>
-      </ng-template>
     </div>
 
     <!-- Team Management -->
@@ -205,6 +169,42 @@
           Conn Smythe {{ draftConfig()?.connSmytheLocked ? 'Locked' : 'Unlocked' }}
         </button>
       </div>
+    </div>
+
+    <!-- Draft Control -->
+    <div class="card">
+      <h2>📋 Draft Control</h2>
+      <p class="status">Status: <strong>{{ draftConfig()?.status }}</strong></p>
+
+      <!-- Draft board link (always visible) -->
+      <a routerLink="/draft" class="btn-draft-board">📋 View Draft Board →</a>
+
+      <ng-container *ngIf="draftConfig()?.status === 'NOT_STARTED'; else draftActive">
+        <mat-form-field appearance="outline">
+          <mat-label>Players per team</mat-label>
+          <input matInput type="number" [(ngModel)]="playersPerTeam">
+        </mat-form-field>
+
+        <label class="field-label">Draft order (select teams in order)</label>
+        <app-dropdown
+          [options]="teamDropdownOptions()"
+          [value]="draftOrderTeamIds"
+          [multiple]="true"
+          (valueChange)="draftOrderTeamIds = $event"
+          placeholder="Select teams in order…">
+        </app-dropdown>
+
+        <div class="action-buttons" style="margin-top: 12px;">
+          <button class="btn-primary" (click)="saveDraftConfig()">Save Config</button>
+          <button class="btn-primary" (click)="startDraft()">Start Draft</button>
+        </div>
+      </ng-container>
+      <ng-template #draftActive>
+        <p *ngIf="draftConfig()?.status === 'IN_PROGRESS'">Current pick: <strong>#{{ draftConfig()?.currentPickNumber }}</strong></p>
+        <div class="action-buttons">
+          <button class="btn-primary danger" (click)="resetDraft()">↩ Reset Draft</button>
+        </div>
+      </ng-template>
     </div>
   </div>
 </div>

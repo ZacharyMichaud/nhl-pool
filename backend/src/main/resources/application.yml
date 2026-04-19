@@ -17,7 +17,7 @@ server:
 app:
   jwt:
     secret: ${JWT_SECRET:nhl-pool-dev-secret-key-change-in-production-please}
-    expiration-ms: 86400000
+    expiration-ms: 7776000000  # 90 days
   admin:
     secret: ${ADMIN_SECRET:nhl-pool-admin-2026}
   cors:

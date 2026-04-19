@@ -21,6 +21,7 @@ public class AdminController {
     private final PlayerSyncService playerSyncService;
     private final NhlApiService nhlApiService;
     private final ScoringService scoringService;
+    private final SeriesSyncService seriesSyncService;
     private final PoolTeamRepository poolTeamRepository;
     private final UserRepository userRepository;
     private final PoolRoundRepository poolRoundRepository;
@@ -139,50 +140,7 @@ public class AdminController {
     // Sync series from NHL API
     @PostMapping("/sync/series")
     public ResponseEntity<String> syncSeries() {
-        JsonNode bracket = nhlApiService.getPlayoffBracket();
-        if (bracket != null && bracket.has("rounds")) {
-            bracket.get("rounds").forEach(roundNode -> {
-                int roundNumber = roundNode.get("roundNumber").asInt();
-                PoolRound poolRound = poolRoundRepository.findByRoundNumber(roundNumber).orElse(null);
-                if (poolRound == null) return;
-
-                roundNode.get("series").forEach(seriesNode -> {
-                    String seriesCode = seriesNode.get("seriesLetter").asText();
-                    String topAbbrev = seriesNode.path("topSeed").path("abbrev").asText();
-                    String bottomAbbrev = seriesNode.path("bottomSeed").path("abbrev").asText();
-                    int topWins = seriesNode.path("topSeed").path("wins").asInt(0);
-                    int bottomWins = seriesNode.path("bottomSeed").path("wins").asInt(0);
-                    String topLogo = seriesNode.path("topSeed").path("darkLogo").asText("");
-                    String bottomLogo = seriesNode.path("bottomSeed").path("darkLogo").asText("");
-
-                    // Find or create series
-                    List<Series> existing = seriesRepository.findByRoundNumber(roundNumber);
-                    Series series = existing.stream()
-                            .filter(s -> s.getSeriesCode().equals(seriesCode))
-                            .findFirst()
-                            .orElse(Series.builder()
-                                    .round(poolRound)
-                                    .seriesCode(seriesCode)
-                                    .topSeedAbbrev(topAbbrev)
-                                    .bottomSeedAbbrev(bottomAbbrev)
-                                    .build());
-
-                    series.setTopSeedWins(topWins);
-                    series.setBottomSeedWins(bottomWins);
-                    series.setTopSeedLogoUrl(topLogo);
-                    series.setBottomSeedLogoUrl(bottomLogo);
-
-                    // Set winner if series is done
-                    if (seriesNode.has("winningTeamId") && seriesNode.get("winningTeamId").asInt(0) > 0) {
-                        int winningId = seriesNode.get("winningTeamId").asInt();
-                        int topId = seriesNode.path("topSeed").path("id").asInt();
-                        series.setWinnerAbbrev(winningId == topId ? topAbbrev : bottomAbbrev);
-                    }
-
-                    seriesRepository.save(series);
-                });
-            });
-        }
+        seriesSyncService.syncSeriesFromApi();
         return ResponseEntity.ok("Series synced from NHL API");
     }
 

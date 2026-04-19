@@ -1,0 +1,57 @@
+<nav class="mobile-nav-bar">
+
+  <a routerLink="/"
+     routerLinkActive="active"
+     [routerLinkActiveOptions]="{exact: true}"
+     class="tab-item"
+     id="mobile-nav-standings">
+    <span class="tab-icon">🏆</span>
+    <span class="tab-label">Standings</span>
+  </a>
+
+  <a routerLink="/series"
+     routerLinkActive="active"
+     class="tab-item"
+     id="mobile-nav-series">
+    <span class="tab-icon">📅</span>
+    <span class="tab-label">Series</span>
+  </a>
+
+  <a routerLink="/players"
+     routerLinkActive="active"
+     class="tab-item"
+     id="mobile-nav-players">
+    <span class="tab-icon">🏒</span>
+    <span class="tab-label">Players</span>
+  </a>
+
+  <a routerLink="/teams"
+     routerLinkActive="active"
+     class="tab-item"
+     id="mobile-nav-teams">
+    <span class="tab-icon">👥</span>
+    <span class="tab-label">Teams</span>
+  </a>
+
+  <!-- Draft tab: only when not COMPLETED -->
+  <a *ngIf="!draftCompleted"
+     routerLink="/draft"
+     routerLinkActive="active"
+     class="tab-item"
+     id="mobile-nav-draft"
+     [class.tab-highlight]="draftActive">
+    <span class="tab-icon">📋</span>
+    <span class="tab-label">Draft</span>
+  </a>
+
+  <!-- Admin tab: only for admins -->
+  <a *ngIf="isAdmin"
+     routerLink="/admin"
+     routerLinkActive="active"
+     class="tab-item admin-tab"
+     id="mobile-nav-admin">
+    <span class="tab-icon">⚙️</span>
+    <span class="tab-label">Admin</span>
+  </a>
+
+</nav>

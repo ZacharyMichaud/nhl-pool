@@ -1,0 +1,146 @@
+<div class="page-container">
+
+  <div class="filter-bar">
+    <app-dropdown
+      [options]="teamOptions()"
+      [value]="teamDropdownValue"
+      (valueChange)="setTeam($event)"
+      id="players-team-filter">
+    </app-dropdown>
+  </div>
+
+  <div class="card table-card" *ngIf="filteredPicks().length > 0; else noPlayers">
+    <div class="table-scroll">
+      <table class="players-table">
+        <thead>
+          <tr>
+            <th class="col-rank desktop-only">#</th>
+            <th class="col-player">Player</th>
+            <th class="col-pos desktop-only">Pos</th>
+            <th class="col-stat sortable" (click)="sortBy('gp')" [class.active]="sortCol === 'gp'">GP <span class="sort-arrow">{{ getSortArrow('gp') }}</span></th>
+            <th class="col-stat sortable" (click)="sortBy('g')"  [class.active]="sortCol === 'g'">G <span class="sort-arrow">{{ getSortArrow('g') }}</span></th>
+            <th class="col-stat sortable" (click)="sortBy('a')"  [class.active]="sortCol === 'a'">A <span class="sort-arrow">{{ getSortArrow('a') }}</span></th>
+            <th class="col-stat col-pts sortable" (click)="sortBy('pts')" [class.active]="sortCol === 'pts'">PTS <span class="sort-arrow">{{ getSortArrow('pts') }}</span></th>
+            <th class="col-stat sortable desktop-only" (click)="sortBy('ppg')" [class.active]="sortCol === 'ppg'">PPG <span class="sort-arrow">{{ getSortArrow('ppg') }}</span></th>
+            <th class="col-stat sortable desktop-only" (click)="sortBy('ppp')" [class.active]="sortCol === 'ppp'">PPP <span class="sort-arrow">{{ getSortArrow('ppp') }}</span></th>
+            <th class="col-stat sortable desktop-only" (click)="sortBy('toi')" [class.active]="sortCol === 'toi'">TOI/GP <span class="sort-arrow">{{ getSortArrow('toi') }}</span></th>
+            <th class="col-pool desktop-only">Pool Team</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let pick of filteredPicks(); let i = index"
+              class="player-row clickable"
+              [class.eliminated]="pick.player?.eliminated"
+              (click)="openModal(pick)">
+            <td class="col-rank desktop-only">{{ i + 1 }}</td>
+            <td class="col-player">
+              <div class="p-cell">
+                <img [src]="pick.player?.headshotUrl" class="p-headshot desktop-only" loading="lazy" onerror="this.style.display='none'">
+                <div class="p-info">
+                  <span class="p-name desktop-only">{{ pick.player?.firstName }} {{ pick.player?.lastName }}</span>
+                  <span class="p-name mobile-only">{{ pick.player?.firstName | slice:0:1 }}. {{ pick.player?.lastName }}</span>
+                  <span class="p-team desktop-only">{{ pick.player?.teamAbbrev }}</span>
+                  <app-pool-badge class="mobile-only" [name]="pick.team?.name" [colorIndex]="teamColorIndex(pick.team?.id)"></app-pool-badge>
+                </div>
+              </div>
+            </td>
+            <td class="col-pos desktop-only">{{ formatPosition(pick.player?.position) }}</td>
+            <td class="col-stat">{{ pick.player?.playoffGamesPlayed ?? 0 }}</td>
+            <td class="col-stat">{{ pick.player?.playoffGoals ?? 0 }}</td>
+            <td class="col-stat">{{ pick.player?.playoffAssists ?? 0 }}</td>
+            <td class="col-stat col-pts">{{ pick.player?.playoffPoints ?? 0 }}</td>
+            <td class="col-stat desktop-only">{{ pick.player?.playoffPowerPlayGoals ?? 0 }}</td>
+            <td class="col-stat desktop-only">{{ pick.player?.playoffPowerPlayPoints ?? 0 }}</td>
+            <td class="col-stat desktop-only">{{ pick.player?.playoffAvgToi || '-' }}</td>
+            <td class="col-pool desktop-only">
+              <app-pool-badge [name]="pick.team?.name" [colorIndex]="teamColorIndex(pick.team?.id)"></app-pool-badge>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <ng-template #noPlayers>
+    <div class="card empty-state">
+      <span class="empty-icon">🏒</span>
+      <p>No players found for this selection.</p>
+    </div>
+  </ng-template>
+</div>
+
+<!-- ════════════════════════════════
+     PLAYER DETAIL MODAL
+════════════════════════════════ -->
+<ng-container *ngIf="selectedPick() as pick">
+  <div class="pm-backdrop" (click)="closeModal()">
+    <div class="pm-sheet" (click)="$event.stopPropagation()">
+
+      <!-- drag handle -->
+      <div class="pm-handle"></div>
+
+      <!-- header: photo + identity -->
+      <div class="pm-header">
+        <img [src]="pick.player?.headshotUrl" class="pm-photo"
+             loading="lazy" onerror="this.style.display='none'">
+        <div class="pm-identity">
+          <div class="pm-name">{{ pick.player?.firstName }} {{ pick.player?.lastName }}</div>
+          <div class="pm-meta">
+            <span class="pm-pos">{{ formatPosition(pick.player?.position) }}</span>
+            <span class="pm-nhl-team">{{ pick.player?.teamAbbrev }}</span>
+          </div>
+          <app-pool-badge
+            [name]="pick.team?.name"
+            [colorIndex]="teamColorIndex(pick.team?.id)">
+          </app-pool-badge>
+        </div>
+      </div>
+
+      <!-- divider -->
+      <div class="pm-divider"></div>
+
+      <!-- playoff stat grid -->
+      <div class="pm-stats-label">PLAYOFF STATS</div>
+      <div class="pm-stats-grid">
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ pick.player?.playoffGamesPlayed ?? 0 }}</div>
+          <div class="pm-stat-lbl">GP</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ pick.player?.playoffGoals ?? 0 }}</div>
+          <div class="pm-stat-lbl">G</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ pick.player?.playoffAssists ?? 0 }}</div>
+          <div class="pm-stat-lbl">A</div>
+        </div>
+        <div class="pm-stat pm-stat-featured">
+          <div class="pm-stat-val pm-stat-val-big">{{ pick.player?.playoffPoints ?? 0 }}</div>
+          <div class="pm-stat-lbl">PTS</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ pick.player?.playoffPowerPlayGoals ?? 0 }}</div>
+          <div class="pm-stat-lbl">PPG</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ pick.player?.playoffPowerPlayPoints ?? 0 }}</div>
+          <div class="pm-stat-lbl">PPP</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ pick.player?.playoffAvgToi || '-' }}</div>
+          <div class="pm-stat-lbl">TOI/GP</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-val">
+            {{ (pick.player?.playoffGamesPlayed ?? 0) > 0
+               ? ((pick.player?.playoffPoints ?? 0) / pick.player.playoffGamesPlayed | number:'1.2-2')
+               : '-' }}
+          </div>
+          <div class="pm-stat-lbl">P/GP</div>
+        </div>
+      </div>
+
+      <button class="pm-close-btn" (click)="closeModal()">Close</button>
+    </div>
+  </div>
+</ng-container>

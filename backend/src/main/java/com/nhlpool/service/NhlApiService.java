@@ -9,6 +9,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,6 +42,99 @@ public class NhlApiService {
             log.error("Failed to fetch playoff bracket", e);
             return null;
         }
+    }
+
+    /**
+     * Returns today's playoff games mapped as gameId → startTimeUTC.
+     * Uses /schedule/now which returns the current week of games.
+     */
+    public Map<Long, Instant> getTodaysPlayoffGames() {
+        try {
+            JsonNode schedule = nhlApiClient.get()
+                    .uri("/schedule/now")
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+
+            if (schedule == null || !schedule.has("gameWeek")) return Map.of();
+
+            String today = LocalDate.now(ZoneOffset.UTC).toString(); // e.g. "2026-04-19"
+            Map<Long, Instant> result = new LinkedHashMap<>();
+
+            schedule.get("gameWeek").forEach(dayNode -> {
+                String date = dayNode.path("date").asText("");
+                if (!date.equals(today)) return;
+
+                dayNode.path("games").forEach(game -> {
+                    int gameType = game.path("gameType").asInt(0);
+                    if (gameType != 3) return; // playoffs only
+
+                    long gameId = game.path("id").asLong();
+                    String startUtc = game.path("startTimeUTC").asText("");
+                    if (gameId > 0 && !startUtc.isEmpty()) {
+                        result.put(gameId, Instant.parse(startUtc));
+                    }
+                });
+            });
+
+            log.info("Found {} playoff game(s) today ({})", result.size(), today);
+            return result;
+        } catch (Exception e) {
+            log.error("Failed to fetch today's playoff schedule", e);
+            return Map.of();
+        }
+    }
+
+    /**
+     * Returns all play events for a game (sorted ascending by sortOrder).
+     * Returns an empty list on error or if no plays exist yet.
+     */
+    public List<JsonNode> getPlayByPlay(long gameId) {
+        try {
+            JsonNode root = nhlApiClient.get()
+                    .uri("/gamecenter/{gameId}/play-by-play", gameId)
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+
+            if (root == null || !root.has("plays")) return List.of();
+
+            List<JsonNode> plays = new ArrayList<>();
+            root.get("plays").forEach(plays::add);
+            plays.sort(Comparator.comparingInt(p -> p.path("sortOrder").asInt(0)));
+            return plays;
+        } catch (Exception e) {
+            log.warn("Failed to fetch play-by-play for game {}: {}", gameId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * Returns the current gameState for a specific game ID from /schedule/now.
+     * States: "FUT" (upcoming), "LIVE"/"CRIT" (in progress), "OFF" (finished).
+     * Returns "" if the game is not found or the call fails.
+     */
+    public String getGameState(long gameId) {
+        try {
+            JsonNode schedule = nhlApiClient.get()
+                    .uri("/schedule/now")
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+
+            if (schedule == null) return "";
+
+            for (JsonNode dayNode : schedule.path("gameWeek")) {
+                for (JsonNode game : dayNode.path("games")) {
+                    if (game.path("id").asLong() == gameId) {
+                        return game.path("gameState").asText("");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch gameState for game {}: {}", gameId, e.getMessage());
+        }
+        return "";
     }
 
     /**

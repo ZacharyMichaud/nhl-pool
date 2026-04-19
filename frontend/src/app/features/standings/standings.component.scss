@@ -1,199 +1,245 @@
-.view-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  background: var(--bg-card);
-  padding: 4px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  width: fit-content;
+// ── Standings Table ────────────────────────────────────────────────────────────
 
-  .tab-btn {
-    padding: 8px 20px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-muted);
-    transition: all 0.2s;
-
-    &:hover { color: var(--text-primary); }
-    &.active {
-      background: var(--bg-secondary);
-      color: var(--accent);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-  }
-}
-
-.filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-
-  .p-count { color: var(--text-muted); font-size: 12px; margin-left: auto; }
-}
-
-.table-card { padding: 0; overflow: hidden; }
-.table-scroll { overflow-x: auto; }
-
-.players-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-
-  th {
-    padding: 12px;
-    text-align: left;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-muted);
-    border-bottom: 2px solid var(--border);
-  }
-
-  td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
-
-  .col-rank { width: 40px; color: var(--text-muted); text-align: center; }
-  .col-stat { text-align: right; font-variant-numeric: tabular-nums; }
-  th.col-stat { text-align: right; }
-  .pts { color: var(--accent); font-weight: 700; }
-
-  .p-cell { display: flex; align-items: center; gap: 10px; }
-  .p-headshot { width: 30px; height: 30px; border-radius: 50%; background: var(--bg-secondary); }
-  .p-info { display: flex; flex-direction: column; }
-  .p-name { font-weight: 600; white-space: nowrap; }
-  .p-team { font-size: 10px; color: var(--text-muted); }
-
-  .pool-badge {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-
-  tr.eliminated { opacity: 0.5; }
-}
-
-$team-colors: (
-  0: #00c3ff, 1: #a855f7, 2: #f59e0b, 3: #10b981, 4: #f43f5e,
-  5: #3b82f6, 6: #fb923c, 7: #e879f9, 8: #84cc16, 9: #06b6d4,
-);
-
-@each $i, $color in $team-colors {
-  .badge-#{$i} {
-    background: rgba($color, 0.15);
-    color: $color;
-    border: 1px solid rgba($color, 0.3);
-  }
-  .team-row-#{$i} {
-    border-left: 3px solid rgba($color, 0.4);
-  }
-}
-
-.standing-card {
+.standings-table-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  -webkit-tap-highlight-color: transparent;
-
-  &:hover { border-color: rgba(0,195,255,0.1); }
-  &.expanded { border-color: rgba(0,195,255,0.2); }
-  &:active { background: var(--bg-card-hover); }
+  overflow: hidden;
 }
 
-.standing-header {
-  display: flex;
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  // ── Header ──────────────────────────────────────────────────────────────
+  thead tr {
+    background: var(--bg-secondary);
+    border-bottom: 2px solid var(--border);
+  }
+
+  th {
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  // ── Body rows ────────────────────────────────────────────────────────────
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s, transform 0.1s;
+    cursor: pointer;
+    outline: none;
+
+    &:last-child { border-bottom: none; }
+
+    &:hover {
+      background: rgba(0, 195, 255, 0.05);
+      .nav-arrow { opacity: 1; transform: translateX(3px); }
+    }
+
+    &:active { background: rgba(0, 195, 255, 0.1); }
+
+    &:focus-visible {
+      box-shadow: inset 0 0 0 2px rgba(0, 195, 255, 0.4);
+    }
+  }
+
+  // Highlight your own team
+  .my-team-row {
+    background: rgba(0, 195, 255, 0.04);
+    td.col-team .team-name::after {
+      content: ' ★';
+      color: var(--accent);
+      font-size: 12px;
+    }
+  }
+
+  td {
+    padding: 14px 16px;
+    vertical-align: middle;
+  }
+
+  // ── Columns ──────────────────────────────────────────────────────────────
+  .col-rank {
+    width: 48px;
+    text-align: center;
+    padding-left: 12px;
+    padding-right: 8px;
+  }
+
+  .col-team { min-width: 140px; }
+
+  .col-stat {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .col-total { min-width: 70px; }
+
+  .col-nav {
+    width: 32px;
+    text-align: center;
+    padding: 0 12px 0 4px;
+  }
+}
+
+// ── Rank badge ──────────────────────────────────────────────────────────────
+.rank-badge {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-
-  @media (min-width: 768px) { gap: 16px; padding: 16px 20px; }
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
 }
 
-.team-main { flex: 1; min-width: 0; }
+.rank-1 {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #000;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+}
+.rank-2 {
+  background: linear-gradient(135deg, #C0C0C0, #A8A8A8);
+  color: #000;
+  box-shadow: 0 2px 8px rgba(192, 192, 192, 0.3);
+}
+.rank-3 {
+  background: linear-gradient(135deg, #CD7F32, #A0522D);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(205, 127, 50, 0.3);
+}
+
+// ── Team cell ───────────────────────────────────────────────────────────────
+.team-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 
 .team-name {
-  font-weight: 700; font-size: 14px; display: block;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  @media (min-width: 768px) { font-size: 16px; }
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.team-members { color: var(--text-secondary); font-size: 11px; }
-
-// ── Points group ──────────────────────────────────────────────────────────────
-.points-group {
-  display: flex;
-  gap: 12px;
-
-  @media (min-width: 768px) { gap: 20px; }
+.team-members {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-// Hide Players & Predictions labels on very small screens — just show Total
-.points-item {
+// ── Stat values ─────────────────────────────────────────────────────────────
+.stat-val {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.total-val {
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--accent);
+}
+
+// ── Nav arrow ───────────────────────────────────────────────────────────────
+.nav-arrow {
+  display: inline-block;
+  color: var(--text-muted);
+  font-size: 16px;
+  opacity: 0.4;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+
+// ── Empty ────────────────────────────────────────────────────────────────────
+.empty-msg {
+  color: var(--text-muted);
   text-align: center;
+  padding: 32px;
+}
 
-  // Hide non-total items on small phones if needed
-  &:not(.total) {
-    display: none;
-    @media (min-width: 400px) { display: block; }
+// ── Mobile: fit in one phone width ──────────────────────────────────────────
+@media (max-width: 480px) {
+  .table-scroll {
+    overflow-x: hidden;
   }
 
-  .label {
-    display: block; font-size: 9px; text-transform: uppercase;
-    color: var(--text-muted); letter-spacing: 0.5px;
-    @media (min-width: 768px) { font-size: 10px; }
+  .standings-table {
+    font-size: 12px;
+
+    th {
+      padding: 8px 6px;
+      font-size: 9px;
+      letter-spacing: 0.3px;
+    }
+
+    td {
+      padding: 10px 6px;
+    }
+
+    .col-rank {
+      width: 32px;
+      padding-left: 6px;
+      padding-right: 4px;
+    }
+
+    .col-team {
+      min-width: 0;
+      max-width: 120px;
+    }
+
+    .col-stat {
+      min-width: 0;
+    }
+
+    .col-total {
+      min-width: 0;
+    }
+
+    .col-nav {
+      width: 24px;
+      padding: 0 6px 0 2px;
+    }
   }
 
-  .val { font-size: 16px; font-weight: 700; @media (min-width: 768px) { font-size: 18px; } }
+  .rank-badge {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+  }
 
-  &.total .val {
-    color: var(--accent);
-    font-size: 20px;
-    @media (min-width: 768px) { font-size: 22px; }
+  .team-name {
+    font-size: 12px;
+  }
+
+  .team-members {
+    font-size: 10px;
+  }
+
+  .total-val {
+    font-size: 13px;
+  }
+
+  .nav-arrow {
+    font-size: 13px;
   }
 }
-
-.expand-icon { color: var(--text-muted); font-size: 11px; flex-shrink: 0; }
-
-// ── Breakdown ─────────────────────────────────────────────────────────────────
-.player-breakdown {
-  padding: 0 14px 14px;
-  border-top: 1px solid var(--border);
-
-  @media (min-width: 768px) { padding: 0 20px 16px; }
-}
-
-.pb-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
-  &:last-child { border-bottom: none; }
-}
-
-.pb-headshot {
-  width: 30px; height: 30px; border-radius: 50%;
-  object-fit: cover; background: var(--bg-secondary); flex-shrink: 0;
-
-  @media (min-width: 768px) { width: 32px; height: 32px; }
-}
-
-.pb-info { flex: 1; min-width: 0; }
-
-.pb-name {
-  font-weight: 600; font-size: 12px; display: block;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  @media (min-width: 768px) { font-size: 13px; }
-}
-
-.pb-meta { color: var(--text-secondary); font-size: 10px; }
-
-.empty { color: var(--text-muted); text-align: center; padding: 24px; }
