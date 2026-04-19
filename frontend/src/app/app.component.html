@@ -11,7 +11,7 @@
       <!-- Desktop links -->
       <div class="nav-links">
         <a routerLink="/"        routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Standings</a>
-        <a routerLink="/series"  routerLinkActive="active">Series</a>
+        <a routerLink="/series"  routerLinkActive="active" class="hide-desktop">Series</a>
         <a routerLink="/players" routerLinkActive="active">Players</a>
         <a routerLink="/teams"   routerLinkActive="active">Teams</a>
         <a *ngIf="!draftCompleted()"

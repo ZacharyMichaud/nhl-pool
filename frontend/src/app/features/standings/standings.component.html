@@ -1,5 +1,6 @@
 <div class="page-container">
 
+  <!-- ── Standings table ─────────────────────────────────────────────────── -->
   <div class="standings-table-card" *ngIf="standings().length > 0; else empty">
     <div class="table-scroll">
       <table class="standings-table">
@@ -22,14 +23,12 @@
             tabindex="0"
             (keydown.enter)="goToTeam(team.teamId)">
 
-            <!-- Rank -->
             <td class="col-rank">
               <span class="rank-badge" [ngClass]="'rank-' + (i < 3 ? (i + 1) : 'other')">
                 {{ i + 1 }}
               </span>
             </td>
 
-            <!-- Team -->
             <td class="col-team">
               <div class="team-cell">
                 <span class="team-name">{{ team.teamName }}</span>
@@ -37,25 +36,10 @@
               </div>
             </td>
 
-            <!-- Player Points -->
-            <td class="col-stat">
-              <span class="stat-val">{{ team.playerPoints }}</span>
-            </td>
-
-            <!-- Prediction Points -->
-            <td class="col-stat">
-              <span class="stat-val">{{ team.predictionPoints }}</span>
-            </td>
-
-            <!-- Total -->
-            <td class="col-stat col-total">
-              <span class="total-val">{{ team.totalPoints }}</span>
-            </td>
-
-            <!-- Arrow -->
-            <td class="col-nav">
-              <span class="nav-arrow">→</span>
-            </td>
+            <td class="col-stat"><span class="stat-val">{{ team.playerPoints }}</span></td>
+            <td class="col-stat"><span class="stat-val">{{ team.predictionPoints }}</span></td>
+            <td class="col-stat col-total"><span class="total-val">{{ team.totalPoints }}</span></td>
+            <td class="col-nav"><span class="nav-arrow">→</span></td>
           </tr>
         </tbody>
       </table>
@@ -67,4 +51,153 @@
       <p class="empty-msg">No standings yet — complete the draft first!</p>
     </div>
   </ng-template>
+
+  <!-- ── Series section (desktop only) ──────────────────────────────────── -->
+  <div class="series-section desktop-only">
+
+    <!-- Header row with round picker -->
+    <div class="series-header">
+      <h2 class="series-heading">Playoff Series</h2>
+      <app-dropdown
+        id="standings-round-select"
+        [options]="roundDropdownOptions"
+        [value]="selectedRound()"
+        (valueChange)="selectRound($event)"
+        placeholder="Select round…">
+      </app-dropdown>
+    </div>
+
+    <!-- West / East columns -->
+    <div class="conference-grid" *ngIf="series().length > 0; else noSeries">
+
+      <!-- WESTERN -->
+      <div class="conf-col">
+        <div class="conf-label west-label">🏒 Western</div>
+        <div class="series-stack" *ngIf="westSeries().length > 0; else noWest">
+          <ng-container *ngFor="let s of westSeries()">
+            <ng-container *ngTemplateOutlet="seriesCard; context: { $implicit: s }"></ng-container>
+          </ng-container>
+        </div>
+        <ng-template #noWest>
+          <div class="conf-empty">No Western series</div>
+        </ng-template>
+      </div>
+
+      <!-- EASTERN -->
+      <div class="conf-col">
+        <div class="conf-label east-label">🏒 Eastern</div>
+        <div class="series-stack" *ngIf="eastSeries().length > 0; else noEast">
+          <ng-container *ngFor="let s of eastSeries()">
+            <ng-container *ngTemplateOutlet="seriesCard; context: { $implicit: s }"></ng-container>
+          </ng-container>
+        </div>
+        <ng-template #noEast>
+          <div class="conf-empty">No Eastern series</div>
+        </ng-template>
+      </div>
+
+    </div>
+
+    <ng-template #noSeries>
+      <div class="card empty-state">
+        <span class="empty-icon">📅</span>
+        <p>No series data for this round yet.</p>
+        <p class="empty-sub">Ask an admin to sync the bracket.</p>
+      </div>
+    </ng-template>
+  </div>
+
 </div>
+
+<!-- ── Series card template ──────────────────────────────────────────────── -->
+<ng-template #seriesCard let-s>
+  <div class="series-card card">
+
+    <!-- Status bar -->
+    <div class="series-status" [class.complete]="s.winnerAbbrev">
+      <span class="status-dot" [class.active]="!s.winnerAbbrev"></span>
+      <span>{{ s.winnerAbbrev ? ('🏆 ' + s.winnerAbbrev + ' wins') : 'In Progress' }}</span>
+    </div>
+
+    <!-- Matchup -->
+    <div class="matchup">
+      <div class="team-side"
+           [class.winner]="s.winnerAbbrev === s.topSeedAbbrev"
+           [class.loser]="s.winnerAbbrev && s.winnerAbbrev !== s.topSeedAbbrev">
+        <img [src]="s.topSeedLogoUrl" class="team-logo" onerror="this.style.display='none'">
+        <span class="team-abbrev">{{ s.topSeedAbbrev }}</span>
+      </div>
+      <div class="score-block">
+        <span class="score">{{ s.topSeedWins }}</span>
+        <span class="score-sep">–</span>
+        <span class="score">{{ s.bottomSeedWins }}</span>
+      </div>
+      <div class="team-side right"
+           [class.winner]="s.winnerAbbrev === s.bottomSeedAbbrev"
+           [class.loser]="s.winnerAbbrev && s.winnerAbbrev !== s.bottomSeedAbbrev">
+        <span class="team-abbrev">{{ s.bottomSeedAbbrev }}</span>
+        <img [src]="s.bottomSeedLogoUrl" class="team-logo" onerror="this.style.display='none'">
+      </div>
+    </div>
+
+    <div class="card-divider"></div>
+
+    <!-- LOCKED: predictions comparison -->
+    <ng-container *ngIf="predictionsLocked(); else entryForm">
+      <div class="picks-list">
+        <div *ngFor="let entry of getAllPredsForSeries(s.id)"
+             class="pick-row"
+             [class.my-row]="isMyTeam(entry.teamId)"
+             [class.correct]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
+             [class.wrong]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">
+          <span class="pick-team-name">{{ entry.teamName }}</span>
+          <span class="pick-winner" *ngIf="entry.pred">{{ entry.pred.predictedWinnerAbbrev }}</span>
+          <span class="pick-winner no-pick" *ngIf="!entry.pred">—</span>
+          <span class="pick-games" *ngIf="entry.pred">{{ entry.pred.predictedGames }}G</span>
+          <span class="pick-games" *ngIf="!entry.pred">—</span>
+          <span class="pick-result" *ngIf="s.winnerAbbrev && entry.pred">
+            <span class="mark correct-mark" *ngIf="entry.pred.predictedWinnerAbbrev === s.winnerAbbrev">✓</span>
+            <span class="mark wrong-mark"   *ngIf="entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">✗</span>
+          </span>
+          <span class="pick-result muted" *ngIf="!s.winnerAbbrev || !entry.pred">—</span>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- UNLOCKED: entry form -->
+    <ng-template #entryForm>
+      <ng-container *ngIf="!s.winnerAbbrev; else seriesDone">
+        <div class="entry-form">
+          <div class="entry-field">
+            <label class="entry-label">Pick Winner</label>
+            <app-dropdown
+              [options]="getWinnerOptions(s)"
+              [value]="predictionDraft()[s.id]?.winner"
+              (valueChange)="onWinnerChange(s.id, $event)"
+              placeholder="Choose team…">
+            </app-dropdown>
+          </div>
+          <div class="entry-field">
+            <label class="entry-label">In</label>
+            <app-dropdown
+              [options]="gameOptions"
+              [value]="predictionDraft()[s.id]?.games"
+              (valueChange)="onGamesChange(s.id, $event)"
+              placeholder="# games">
+            </app-dropdown>
+          </div>
+        </div>
+      </ng-container>
+      <ng-template #seriesDone>
+        <div class="your-pick" *ngIf="predictionDraft()[s.id]?.winner; else noPick">
+          <span class="pick-label">Your pick</span>
+          <span class="pick-val">{{ predictionDraft()[s.id]?.winner }} in {{ predictionDraft()[s.id]?.games }}G</span>
+        </div>
+        <ng-template #noPick>
+          <p class="no-pick-msg">No prediction made</p>
+        </ng-template>
+      </ng-template>
+    </ng-template>
+
+  </div>
+</ng-template>
