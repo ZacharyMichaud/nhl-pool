@@ -48,7 +48,13 @@
                [class.correct]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
                [class.wrong]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">
             <span class="pick-team-name">{{ entry.teamName }}</span>
-            <span class="pick-winner" *ngIf="entry.pred">{{ entry.pred.predictedWinnerAbbrev }}</span>
+            <span class="pick-winner" *ngIf="entry.pred">
+              <img *ngIf="getLogoForAbbrev(s, entry.pred.predictedWinnerAbbrev)"
+                   [src]="getLogoForAbbrev(s, entry.pred.predictedWinnerAbbrev)"
+                   class="pick-winner-logo"
+                   onerror="this.style.display='none'">
+              {{ entry.pred.predictedWinnerAbbrev }}
+            </span>
             <span class="pick-winner no-pick" *ngIf="!entry.pred">—</span>
             <span class="pick-games" *ngIf="entry.pred">{{ entry.pred.predictedGames }}G</span>
             <span class="pick-games" *ngIf="!entry.pred">—</span>

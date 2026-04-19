@@ -141,7 +141,7 @@ $mobile: 768px;
 
 .pick-row {
   display: grid;
-  grid-template-columns: 1fr 44px 34px 24px;
+  grid-template-columns: 1fr 64px 34px 24px;
   align-items: center;
   padding: 7px 14px;
   font-size: 12px;
@@ -169,11 +169,22 @@ $mobile: 768px;
 }
 
 .pick-winner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-weight: 700;
   font-size: 12px;
   text-align: center;
 
   &.no-pick { color: var(--text-muted); }
+}
+
+.pick-winner-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+  vertical-align: middle;
 }
 
 .pick-games {

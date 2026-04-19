@@ -154,6 +154,13 @@ export class SeriesComponent implements OnInit {
     }));
   }
 
+  getLogoForAbbrev(s: any, abbrev: string): string {
+    if (!abbrev) return '';
+    if (s.topSeedAbbrev === abbrev) return s.topSeedLogoUrl || '';
+    if (s.bottomSeedAbbrev === abbrev) return s.bottomSeedLogoUrl || '';
+    return '';
+  }
+
   isMyTeam(teamId: number): boolean {
     return this.auth.teamId() === teamId;
   }

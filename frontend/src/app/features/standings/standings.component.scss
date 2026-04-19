@@ -200,7 +200,7 @@
 
 .pick-row {
   display: grid;
-  grid-template-columns: 1fr 44px 34px 24px;
+  grid-template-columns: minmax(80px, 1fr) 64px 34px 24px;
   align-items: center;
   padding: 7px 14px;
   font-size: 12px;
@@ -219,20 +219,23 @@
   &.wrong   .pick-winner { color: var(--danger); }
 }
 
-.pick-team-name {
-  font-weight: 600;
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .pick-winner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-weight: 700;
   font-size: 12px;
   text-align: center;
 
   &.no-pick { color: var(--text-muted); }
+}
+
+.pick-winner-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+  vertical-align: middle;
 }
 
 .pick-games {

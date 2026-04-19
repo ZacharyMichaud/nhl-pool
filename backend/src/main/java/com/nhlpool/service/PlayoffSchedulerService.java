@@ -67,6 +67,34 @@ public class PlayoffSchedulerService {
             log.info("[Scheduler] No playoff games today — live watcher will be a no-op.");
         } else {
             log.info("[Scheduler] Tracking {} game(s) today: {}", games.size(), games.keySet());
+            // Catch-up: if any games are already finished (server restarted after game ended), sync now
+            catchUpFinishedGames(games);
+        }
+    }
+
+    /**
+     * Called at startup / schedule refresh. Immediately syncs any games that are already
+     * in a finished state so we don't wait 30s for the live watcher to pick them up.
+     */
+    private void catchUpFinishedGames(Map<Long, Instant> games) {
+        boolean triggeredSync = false;
+        for (long gameId : games.keySet()) {
+            if (processedGames.contains(gameId)) continue;
+            String state = nhlApiService.getGameState(gameId);
+            if ("OFF".equals(state) || "FINAL".equals(state) || "7".equals(state)) {
+                log.info("[Scheduler] Catch-up: game {} already finished ({}). Triggering sync.", gameId, state);
+                processedGames.add(gameId);
+                triggeredSync = true;
+            }
+        }
+        if (triggeredSync) {
+            try {
+                seriesSyncService.syncSeriesFromApi();
+                playerSyncService.syncDraftedPlayerStats();
+                log.info("[Scheduler] Catch-up sync complete.");
+            } catch (Exception e) {
+                log.error("[Scheduler] Error during catch-up sync", e);
+            }
         }
     }
 

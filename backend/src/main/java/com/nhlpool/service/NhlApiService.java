@@ -110,11 +110,15 @@ public class NhlApiService {
     }
 
     /**
-     * Returns the current gameState for a specific game ID from /schedule/now.
-     * States: "FUT" (upcoming), "LIVE"/"CRIT" (in progress), "OFF" (finished).
-     * Returns "" if the game is not found or the call fails.
+     * Returns the current gameState for a specific game ID.
+     * First checks /schedule/now (for live/upcoming games in the current week).
+     * If the game is not found there (e.g. it already finished and dropped off the schedule),
+     * falls back to /gamecenter/{gameId}/landing to get the definitive state.
+     * States: "FUT" (upcoming), "LIVE"/"CRIT" (in progress), "OFF"/"FINAL" (finished).
+     * Returns "" only if both calls fail.
      */
     public String getGameState(long gameId) {
+        // 1. Try /schedule/now first (cheap, covers live games)
         try {
             JsonNode schedule = nhlApiClient.get()
                     .uri("/schedule/now")
@@ -122,18 +126,39 @@ public class NhlApiService {
                     .bodyToMono(JsonNode.class)
                     .block();
 
-            if (schedule == null) return "";
-
-            for (JsonNode dayNode : schedule.path("gameWeek")) {
-                for (JsonNode game : dayNode.path("games")) {
-                    if (game.path("id").asLong() == gameId) {
-                        return game.path("gameState").asText("");
+            if (schedule != null) {
+                for (JsonNode dayNode : schedule.path("gameWeek")) {
+                    for (JsonNode game : dayNode.path("games")) {
+                        if (game.path("id").asLong() == gameId) {
+                            return game.path("gameState").asText("");
+                        }
                     }
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to fetch gameState for game {}: {}", gameId, e.getMessage());
+            log.warn("Failed to fetch gameState from schedule for game {}: {}", gameId, e.getMessage());
         }
+
+        // 2. Game not in /schedule/now — fall back to gamecenter landing (handles finished games)
+        log.debug("[GameState] Game {} not found in /schedule/now — falling back to gamecenter landing", gameId);
+        try {
+            JsonNode landing = nhlApiClient.get()
+                    .uri("/gamecenter/{gameId}/landing", gameId)
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+
+            if (landing != null) {
+                String state = landing.path("gameState").asText("");
+                if (!state.isEmpty()) {
+                    log.info("[GameState] Game {} resolved via gamecenter landing: {}", gameId, state);
+                    return state;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch gameState from gamecenter landing for game {}: {}", gameId, e.getMessage());
+        }
+
         return "";
     }
 
