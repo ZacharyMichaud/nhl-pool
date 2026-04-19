@@ -141,7 +141,7 @@ $mobile: 768px;
 
 .pick-row {
   display: grid;
-  grid-template-columns: 1fr 64px 34px 24px;
+  grid-template-columns: minmax(80px, 1fr) 64px 34px 24px;
   align-items: center;
   padding: 7px 14px;
   font-size: 12px;
@@ -160,13 +160,6 @@ $mobile: 768px;
   &.wrong   .pick-winner { color: var(--danger); }
 }
 
-.pick-team-name {
-  font-weight: 600;
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 .pick-winner {
   display: inline-flex;

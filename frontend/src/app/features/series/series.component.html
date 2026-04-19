@@ -47,7 +47,7 @@
                [class.my-row]="isMyTeam(entry.teamId)"
                [class.correct]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
                [class.wrong]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">
-            <span class="pick-team-name">{{ entry.teamName }}</span>
+            <app-pool-badge [name]="entry.teamName" [colorIndex]="teamColorIndex(entry.teamId)"></app-pool-badge>
             <span class="pick-winner" *ngIf="entry.pred">
               <img *ngIf="getLogoForAbbrev(s, entry.pred.predictedWinnerAbbrev)"
                    [src]="getLogoForAbbrev(s, entry.pred.predictedWinnerAbbrev)"

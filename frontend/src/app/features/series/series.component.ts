@@ -6,11 +6,12 @@ import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
+import { PoolBadgeComponent } from '../../shared/components/pool-badge/pool-badge.component';
 
 @Component({
   selector: 'app-series',
   standalone: true,
-  imports: [CommonModule, MatSnackBarModule, DropdownComponent],
+  imports: [CommonModule, MatSnackBarModule, DropdownComponent, PoolBadgeComponent],
   templateUrl: './series.component.html',
   styleUrl: './series.component.scss',
 })
@@ -152,6 +153,12 @@ export class SeriesComponent implements OnInit {
         (p: any) => p.series?.id === seriesId && p.team?.id === team.teamId
       ) ?? null,
     }));
+  }
+
+  /** Returns a stable color index (0–9) for each pool team, matching the badge palette. */
+  teamColorIndex(teamId: number): number {
+    const idx = this.allTeams().findIndex((t: any) => t.teamId === teamId);
+    return idx === -1 ? 0 : idx % 10;
   }
 
   getLogoForAbbrev(s: any, abbrev: string): string {

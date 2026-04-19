@@ -35,7 +35,7 @@
             <td class="col-rank desktop-only">{{ i + 1 }}</td>
             <td class="col-player">
               <div class="p-cell">
-                <img [src]="pick.player?.headshotUrl" class="p-headshot desktop-only" loading="lazy" onerror="this.style.display='none'">
+                <img [src]="pick.player?.headshotUrl" class="p-headshot" loading="lazy" onerror="this.style.display='none'">
                 <div class="p-info">
                   <span class="p-name desktop-only">{{ pick.player?.firstName }} {{ pick.player?.lastName }}</span>
                   <span class="p-name mobile-only">{{ pick.player?.firstName | slice:0:1 }}. {{ pick.player?.lastName }}</span>
