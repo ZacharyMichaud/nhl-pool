@@ -46,10 +46,18 @@ public class PlayoffSchedulerService {
     // -------------------------------------------------------------------------
 
     /**
-     * Runs at startup and at 10:00 AM UTC every day.
-     * Fetches today's playoff game IDs + start times and resets tracking state.
+     * Runs once at startup (via @PostConstruct) — seeds today's schedule immediately.
      */
     @PostConstruct
+    public void initSchedule() {
+        refreshTodaysSchedule();
+    }
+
+    /**
+     * Runs at 10:00 AM UTC every day — refreshes the schedule for the new day.
+     * NOTE: Must be a separate method from @PostConstruct so Spring properly
+     * registers it with the task scheduler.
+     */
     @Scheduled(cron = "0 0 10 * * *") // 10:00 AM UTC daily
     public void refreshTodaysSchedule() {
         log.info("[Scheduler] Refreshing today's playoff schedule...");

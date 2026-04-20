@@ -37,14 +37,18 @@ public class AdminController {
 
     @PostMapping("/sync/stats")
     public ResponseEntity<String> syncStats() {
-        playerSyncService.syncDraftedPlayerStats();
-        return ResponseEntity.ok("Stats sync initiated");
+        Thread t = new Thread(playerSyncService::syncDraftedPlayerStats, "manual-stats-sync");
+        t.setDaemon(true);
+        t.start();
+        return ResponseEntity.ok("Stats sync initiated (running in background)");
     }
 
     @PostMapping("/sync/all-stats")
     public ResponseEntity<String> syncAllStats() {
-        playerSyncService.syncAllPlayerStats();
-        return ResponseEntity.ok("Full stats sync initiated");
+        Thread t = new Thread(playerSyncService::syncAllPlayerStats, "manual-all-stats-sync");
+        t.setDaemon(true);
+        t.start();
+        return ResponseEntity.ok("Full stats sync initiated (running in background)");
     }
 
     @GetMapping("/scoring-rules")
