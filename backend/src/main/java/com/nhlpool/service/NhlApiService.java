@@ -109,7 +109,9 @@ public class NhlApiService {
             Map<Long, Instant> startTimes  = new LinkedHashMap<>();
             Map<Long, String>  gameStates  = new LinkedHashMap<>();
 
-            schedule.get("gameWeek").forEach(dayNode ->
+            schedule.get("gameWeek").forEach(dayNode -> {
+                // /schedule/{date} returns the full game week — filter to this specific date only
+                if (!etDate.toString().equals(dayNode.path("date").asText(""))) return;
                 dayNode.path("games").forEach(game -> {
                     if (game.path("gameType").asInt(0) != 3) return; // playoffs only
                     long   gameId    = game.path("id").asLong();
@@ -119,8 +121,8 @@ public class NhlApiService {
                         startTimes.put(gameId, Instant.parse(startUtc));
                         gameStates.put(gameId, gameState);
                     }
-                })
-            );
+                });
+            });
             return new ScheduleResult(startTimes, gameStates);
         } catch (Exception e) {
             log.warn("[Schedule] Failed to fetch schedule for ET date {}: {}", etDate, e.getMessage());

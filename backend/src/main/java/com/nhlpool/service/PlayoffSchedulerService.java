@@ -108,18 +108,17 @@ public class PlayoffSchedulerService {
 
         Instant now = Instant.now();
 
+        // Fast gate: if no unprocessed game has started yet, nothing to do — zero API calls
+        boolean anyActive = todaysGames.entrySet().stream()
+                .anyMatch(e -> !processedGames.contains(e.getKey()) && !now.isBefore(e.getValue()));
+        if (!anyActive) return;
+
         for (Map.Entry<Long, Instant> entry : todaysGames.entrySet()) {
-            long gameId = entry.getKey();
+            long gameId    = entry.getKey();
             Instant startTime = entry.getValue();
 
-            // GATE: game hasn't started yet — pure in-memory timestamp check, zero API calls
-            if (now.isBefore(startTime)) {
-                log.debug("[Scheduler] Game {} hasn't started yet (starts {}), skipping", gameId, startTime);
-                continue;
-            }
-
-            // Already fully processed (game went OFF earlier)
-            if (processedGames.contains(gameId)) continue;
+            if (now.isBefore(startTime)) continue; // not started yet
+            if (processedGames.contains(gameId)) continue; // already finished
 
             // Fetch current game state
             String gameState = nhlApiService.getGameState(gameId);
