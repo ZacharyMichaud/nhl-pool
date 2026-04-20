@@ -11,6 +11,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -45,48 +46,85 @@ public class NhlApiService {
     }
 
     /**
-     * Returns today's playoff games mapped as gameId → startTimeUTC.
-     * Uses /schedule/now which returns the current week of games.
+     * Returns today's and yesterday's playoff games mapped as gameId → startTimeUTC.
+     * Used by the live scheduler to know which games to watch.
      */
     public Map<Long, Instant> getTodaysPlayoffGames() {
+        ZoneId eastern = ZoneId.of("America/New_York");
+        LocalDate todayEt     = LocalDate.now(eastern);
+        LocalDate yesterdayEt = todayEt.minusDays(1);
+
+        Map<Long, Instant> result = new LinkedHashMap<>();
+        for (LocalDate date : new LocalDate[]{todayEt, yesterdayEt}) {
+            result.putAll(fetchScheduleForDate(date).startTimes);
+        }
+
+        log.debug("[Schedule] Found {} playoff game(s) for ET dates [{}, {}]: {}",
+                result.size(), yesterdayEt, todayEt, result.keySet());
+        return result;
+    }
+
+    /**
+     * Returns only today's/yesterday's finished playoff games (gameState OFF or FINAL).
+     * Reads gameState directly from the schedule response — NO extra per-game API calls.
+     * Used by Phase 2 of the manual sync to avoid 20+ individual getGameState() calls.
+     */
+    public Map<Long, String> getTodaysFinishedPlayoffGames() {
+        ZoneId eastern = ZoneId.of("America/New_York");
+        LocalDate todayEt     = LocalDate.now(eastern);
+        LocalDate yesterdayEt = todayEt.minusDays(1);
+
+        Map<Long, String> finished = new LinkedHashMap<>();
+        for (LocalDate date : new LocalDate[]{todayEt, yesterdayEt}) {
+            ScheduleResult sr = fetchScheduleForDate(date);
+            sr.gameStates.forEach((gameId, state) -> {
+                if ("OFF".equals(state) || "FINAL".equals(state) || "7".equals(state)) {
+                    finished.put(gameId, state);
+                }
+            });
+        }
+
+        log.debug("[Schedule] Found {} finished playoff game(s) for ET dates [{}, {}]: {}",
+                finished.size(), yesterdayEt, todayEt, finished.keySet());
+        return finished;
+    }
+
+    /** Internal holder for schedule fetch results. */
+    private record ScheduleResult(Map<Long, Instant> startTimes, Map<Long, String> gameStates) {}
+
+    /**
+     * Fetches all playoff games for a specific ET date from /schedule/{date}.
+     * Captures both startTimeUTC and gameState in one HTTP call.
+     */
+    private ScheduleResult fetchScheduleForDate(LocalDate etDate) {
         try {
             JsonNode schedule = nhlApiClient.get()
-                    .uri("/schedule/now")
+                    .uri("/schedule/{date}", etDate.toString())
                     .retrieve()
                     .bodyToMono(JsonNode.class)
                     .block();
 
-            if (schedule == null || !schedule.has("gameWeek")) return Map.of();
+            if (schedule == null || !schedule.has("gameWeek")) return new ScheduleResult(Map.of(), Map.of());
 
-            // The NHL API uses Eastern-time dates (e.g. "2026-04-19"), but if this server
-            // runs in UTC, LocalDate.now(UTC) can already be "2026-04-20" after 8 PM ET.
-            // Check both today and yesterday (UTC) so we never miss tonight's games.
-            String todayUtc = LocalDate.now(ZoneOffset.UTC).toString();
-            String yesterdayUtc = LocalDate.now(ZoneOffset.UTC).minusDays(1).toString();
-            Map<Long, Instant> result = new LinkedHashMap<>();
+            Map<Long, Instant> startTimes  = new LinkedHashMap<>();
+            Map<Long, String>  gameStates  = new LinkedHashMap<>();
 
-            schedule.get("gameWeek").forEach(dayNode -> {
-                String date = dayNode.path("date").asText("");
-                if (!date.equals(todayUtc) && !date.equals(yesterdayUtc)) return;
-
+            schedule.get("gameWeek").forEach(dayNode ->
                 dayNode.path("games").forEach(game -> {
-                    int gameType = game.path("gameType").asInt(0);
-                    if (gameType != 3) return; // playoffs only
-
-                    long gameId = game.path("id").asLong();
-                    String startUtc = game.path("startTimeUTC").asText("");
+                    if (game.path("gameType").asInt(0) != 3) return; // playoffs only
+                    long   gameId    = game.path("id").asLong();
+                    String startUtc  = game.path("startTimeUTC").asText("");
+                    String gameState = game.path("gameState").asText("");
                     if (gameId > 0 && !startUtc.isEmpty()) {
-                        result.put(gameId, Instant.parse(startUtc));
+                        startTimes.put(gameId, Instant.parse(startUtc));
+                        gameStates.put(gameId, gameState);
                     }
-                });
-            });
-
-            log.info("Found {} playoff game(s) for dates [{}, {}]: {}",
-                    result.size(), yesterdayUtc, todayUtc, result.keySet());
-            return result;
+                })
+            );
+            return new ScheduleResult(startTimes, gameStates);
         } catch (Exception e) {
-            log.error("Failed to fetch today's playoff schedule", e);
-            return Map.of();
+            log.warn("[Schedule] Failed to fetch schedule for ET date {}: {}", etDate, e.getMessage());
+            return new ScheduleResult(Map.of(), Map.of());
         }
     }
 
@@ -113,6 +151,127 @@ public class NhlApiService {
             return List.of();
         }
     }
+
+    /**
+     * Syncs stats for all drafted players from a specific game's boxscore.
+     *
+     * WHY: /game-log endpoint takes 2-4h after a game ends to reflect stats.
+     *      /gamecenter/{gameId}/boxscore is live — final stats appear immediately
+     *      when the game ends. This is used by the post-game scheduler trigger
+     *      to give instant updates, while the game-log sync handles the full
+     *      historical totals once the NHL processes the game.
+     *
+     * Strategy: fetch game-log totals for all previous games EXCLUDING this one,
+     * then add this game's boxscore stats on top.
+     */
+    public void syncDraftedPlayersFromBoxscore(List<Player> draftedPlayers, long gameId) {
+        log.debug("[Boxscore] Fetching boxscore for game {} to get immediate post-game stats", gameId);
+        try {
+            JsonNode boxscore = nhlApiClient.get()
+                    .uri("/gamecenter/{gameId}/boxscore", gameId)
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+
+            if (boxscore == null) {
+                log.warn("[Boxscore] Null response for game {}", gameId);
+                return;
+            }
+
+            // Build a lookup map: nhlPlayerId → stats node from boxscore
+            Map<Long, JsonNode> boxscoreStats = new HashMap<>();
+            JsonNode playerStats = boxscore.path("playerByGameStats");
+            for (String side : new String[]{"homeTeam", "awayTeam"}) {
+                JsonNode team = playerStats.path(side);
+                for (String group : new String[]{"forwards", "defense", "goalies"}) {
+                    team.path(group).forEach(p -> {
+                        long pid = p.path("playerId").asLong(0);
+                        if (pid > 0) boxscoreStats.put(pid, p);
+                    });
+                }
+            }
+
+            log.debug("[Boxscore] Game {} boxscore has {} player entries", gameId, boxscoreStats.size());
+
+            for (Player player : draftedPlayers) {
+                JsonNode stats = boxscoreStats.get(player.getNhlPlayerId());
+                if (stats == null) {
+                    log.debug("[Boxscore] {} not in boxscore for game {} (did not play)", player.getFullName(), gameId);
+                    continue;
+                }
+
+                // Fetch game-log totals BEFORE this game to use as a base
+                // (we re-sum all finalized games and add this game's boxscore on top)
+                int baseGP = 0, baseG = 0, baseA = 0, basePts = 0, basePPG = 0, basePPP = 0;
+                long baseToi = 0;
+                try {
+                    JsonNode gameLog = nhlApiClient.get()
+                            .uri("/player/{playerId}/game-log/{season}/3", player.getNhlPlayerId(), season)
+                            .retrieve()
+                            .bodyToMono(JsonNode.class)
+                            .block();
+                    if (gameLog != null && gameLog.path("gameLog").isArray()) {
+                        for (JsonNode g : gameLog.path("gameLog")) {
+                            // Skip this game if it's already in the log (avoid double-count)
+                            if (g.path("gameId").asLong(0) == gameId) continue;
+                            baseGP++;
+                            baseG   += g.path("goals").asInt(0);
+                            baseA   += g.path("assists").asInt(0);
+                            basePts += g.path("points").asInt(0);
+                            basePPG += g.path("powerPlayGoals").asInt(0);
+                            basePPP += g.path("powerPlayPoints").asInt(0);
+                            String toi = g.path("toi").asText("");
+                            if (!toi.isEmpty()) baseToi += toiToSeconds(toi);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("[Boxscore] Could not fetch game-log base for {}: {}", player.getFullName(), e.getMessage());
+                    // Fall back to current stored values as base
+                    baseGP  = player.getPlayoffGamesPlayed() != null ? player.getPlayoffGamesPlayed() : 0;
+                    baseG   = player.getPlayoffGoals()      != null ? player.getPlayoffGoals()      : 0;
+                    baseA   = player.getPlayoffAssists()    != null ? player.getPlayoffAssists()    : 0;
+                    basePts = player.getPlayoffPoints()     != null ? player.getPlayoffPoints()     : 0;
+                    basePPG = player.getPlayoffPowerPlayGoals()   != null ? player.getPlayoffPowerPlayGoals()   : 0;
+                    basePPP = player.getPlayoffPowerPlayPoints()  != null ? player.getPlayoffPowerPlayPoints()  : 0;
+                }
+
+                // Add this game's boxscore stats
+                int g   = stats.path("goals").asInt(0);
+                int a   = stats.path("assists").asInt(0);
+                int pts = stats.path("points").asInt(0);
+                int ppg = stats.path("powerPlayGoals").asInt(0);
+                int ppp = stats.path("powerPlayPoints").asInt(0);
+                String toiStr = stats.path("toi").asText("");
+                long thisToi = toiToSeconds(toiStr);
+
+                int totalGP  = baseGP + 1;
+                int totalG   = baseG + g;
+                int totalA   = baseA + a;
+                int totalPts = basePts + pts;
+                int totalPPG = basePPG + ppg;
+                int totalPPP = basePPP + ppp;
+                long totalToi = baseToi + thisToi;
+                String avgToi = totalGP > 0 ? secondsToToi(totalToi / totalGP) : null;
+
+                player.setPlayoffGamesPlayed(totalGP);
+                player.setPlayoffGoals(totalG);
+                player.setPlayoffAssists(totalA);
+                player.setPlayoffPoints(totalPts);
+                player.setPlayoffPowerPlayGoals(totalPPG);
+                player.setPlayoffPowerPlayPoints(totalPPP);
+                player.setPlayoffAvgToi(avgToi);
+                playerRepository.save(player);
+
+                log.info("[Boxscore] {} ({}) — game {} stats: G:{} A:{} PTS:{} | season totals now: GP:{} G:{} A:{} PTS:{}",
+                        player.getFullName(), player.getTeamAbbrev(), gameId,
+                        g, a, pts, totalGP, totalG, totalA, totalPts);
+            }
+        } catch (Exception e) {
+            log.error("[Boxscore] Failed to sync from boxscore for game {}: {}", gameId, e.getMessage());
+        }
+    }
+
+
 
     /**
      * Returns the current gameState for a specific game ID.
@@ -279,39 +438,78 @@ public class NhlApiService {
     }
 
     /**
-     * Sync ONLY playoff stats — fast, used by the scheduled job
+     * Sync ONLY playoff stats for the current season — fast, used by the scheduler.
+     *
+     * WHY game-log instead of seasonTotals:
+     *   The /player/landing seasonTotals array only adds a gameTypeId=3 entry AFTER
+     *   the entire playoffs are over. During live playoffs the data lives in the
+     *   game-log endpoint: /player/{id}/game-log/{season}/3
+     *   We sum each game's stats to produce cumulative totals.
      */
     public void syncPlayoffStats(Player player) {
         try {
-            JsonNode landing = nhlApiClient.get()
-                    .uri("/player/{playerId}/landing", player.getNhlPlayerId())
+            JsonNode gameLogResponse = nhlApiClient.get()
+                    .uri("/player/{playerId}/game-log/{season}/3", player.getNhlPlayerId(), season)
                     .retrieve()
                     .bodyToMono(JsonNode.class)
                     .block();
 
-            if (landing == null) return;
-
-            JsonNode seasonTotals = landing.path("seasonTotals");
-            if (seasonTotals.isArray()) {
-                seasonTotals.forEach(seasonEntry -> {
-                    String league = seasonEntry.path("leagueAbbrev").asText("");
-                    int gameType = seasonEntry.path("gameTypeId").asInt(0);
-                    String seasonStr = String.valueOf(seasonEntry.path("season").asInt(0));
-
-                    if ("NHL".equals(league) && seasonStr.equals(season) && gameType == 3) {
-                        player.setPlayoffGoals(seasonEntry.path("goals").asInt(0));
-                        player.setPlayoffAssists(seasonEntry.path("assists").asInt(0));
-                        player.setPlayoffPoints(seasonEntry.path("points").asInt(0));
-                        player.setPlayoffGamesPlayed(seasonEntry.path("gamesPlayed").asInt(0));
-                        player.setPlayoffPowerPlayGoals(seasonEntry.path("powerPlayGoals").asInt(0));
-                        player.setPlayoffPowerPlayPoints(seasonEntry.path("powerPlayPoints").asInt(0));
-                        player.setPlayoffAvgToi(seasonEntry.path("avgToi").asText(null));
-                    }
-                });
+            if (gameLogResponse == null) {
+                log.warn("[API] {} — playoff game-log response was null", player.getFullName());
+                return;
             }
+
+            JsonNode games = gameLogResponse.path("gameLog");
+            if (!games.isArray()) {
+                log.warn("[API] {} ({}) — no playoff gameLog array in response (player may not have played yet)",
+                        player.getFullName(), player.getTeamAbbrev());
+                playerRepository.save(player);
+                return;
+            }
+
+            // Sum stats across all playoff games
+            int gp = 0, goals = 0, assists = 0, points = 0, ppg = 0, ppp = 0;
+            long totalToiSeconds = 0;
+
+            for (JsonNode game : games) {
+                gp++;
+                goals   += game.path("goals").asInt(0);
+                assists += game.path("assists").asInt(0);
+                points  += game.path("points").asInt(0);
+                ppg     += game.path("powerPlayGoals").asInt(0);
+                ppp     += game.path("powerPlayPoints").asInt(0);
+                String toi = game.path("toi").asText("");
+                if (!toi.isEmpty()) totalToiSeconds += toiToSeconds(toi);
+            }
+
+            // Guard: never overwrite with data that represents fewer games than we already have.
+            // This protects boxscore-synced stats from being clobbered by the game-log endpoint
+            // which takes 2-4h to reflect a finished game.
+            int storedGP = player.getPlayoffGamesPlayed() != null ? player.getPlayoffGamesPlayed() : 0;
+            if (gp < storedGP) {
+                log.warn("[API] {} ({}) — game-log returned {} games but DB has {}. " +
+                         "Game-log hasn't caught up yet — keeping existing stats to avoid overwrite.",
+                        player.getFullName(), player.getTeamAbbrev(), gp, storedGP);
+                return; // don't touch the DB — boxscore data is more current
+            }
+
+            String avgToi = gp > 0 ? secondsToToi(totalToiSeconds / gp) : null;
+
+            player.setPlayoffGamesPlayed(gp);
+            player.setPlayoffGoals(goals);
+            player.setPlayoffAssists(assists);
+            player.setPlayoffPoints(points);
+            player.setPlayoffPowerPlayGoals(ppg);
+            player.setPlayoffPowerPlayPoints(ppp);
+            player.setPlayoffAvgToi(avgToi);
+
+            log.debug("[API] {} ({}) — playoff game-log: {} games, G:{} A:{} PTS:{} PPG:{} PPP:{} TOI/GP:{}",
+                    player.getFullName(), player.getTeamAbbrev(),
+                    gp, goals, assists, points, ppg, ppp, avgToi != null ? avgToi : "N/A");
+
             playerRepository.save(player);
         } catch (Exception e) {
-            log.error("Failed to sync playoff stats for player {}", player.getFullName(), e);
+            log.error("[API] Failed to sync playoff stats for {} — {}", player.getFullName(), e.getMessage());
         }
     }
 

@@ -8,6 +8,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -34,27 +35,78 @@ public class PlayerSyncService {
 
     /**
      * Sync stats for all drafted players.
-     * Called by PlayoffSchedulerService after a game ends (and optionally after each goal).
+     *
+     * Two-phase approach:
+     *   Phase 1 — Game-log (accurate historical totals, but 2-4h delay after game ends)
+     *   Phase 2 — Boxscore for today's finished games (instant, fills the gap while game-log catches up)
+     *
+     * The guard in syncPlayoffStats prevents Phase 1 from overwriting Phase 2 data.
      */
     public void syncDraftedPlayerStats() {
         List<Player> draftedPlayers = playerRepository.findByDraftedTrue();
-        if (draftedPlayers.isEmpty()) return;
+        if (draftedPlayers.isEmpty()) {
+            log.warn("[Sync] No drafted players found — nothing to sync");
+            return;
+        }
 
-        log.info("Syncing playoff stats for {} drafted players", draftedPlayers.size());
-        draftedPlayers.forEach(nhlApiService::syncPlayoffStats);
+        log.info("[Sync] Syncing playoff stats for {} drafted players...", draftedPlayers.size());
+        int[] succeeded = {0}, failed = {0};
 
-        // Update eliminated status
+        for (Player player : draftedPlayers) {
+            int beforeG  = player.getPlayoffGoals()       != null ? player.getPlayoffGoals()       : 0;
+            int beforeA  = player.getPlayoffAssists()     != null ? player.getPlayoffAssists()     : 0;
+            int beforeP  = player.getPlayoffPoints()      != null ? player.getPlayoffPoints()      : 0;
+            int beforeGP = player.getPlayoffGamesPlayed() != null ? player.getPlayoffGamesPlayed() : 0;
+            try {
+                nhlApiService.syncPlayoffStats(player);
+                int afterG  = player.getPlayoffGoals()       != null ? player.getPlayoffGoals()       : 0;
+                int afterA  = player.getPlayoffAssists()     != null ? player.getPlayoffAssists()     : 0;
+                int afterP  = player.getPlayoffPoints()      != null ? player.getPlayoffPoints()      : 0;
+                int afterGP = player.getPlayoffGamesPlayed() != null ? player.getPlayoffGamesPlayed() : 0;
+                boolean changed = afterG != beforeG || afterA != beforeA || afterP != beforeP || afterGP != beforeGP;
+                if (changed) {
+                    log.info("[Sync]  ✓ {} ({}) — GP:{}->{} G:{}->{} A:{}->{} PTS:{}→{}",
+                            player.getFullName(), player.getTeamAbbrev(),
+                            beforeGP, afterGP, beforeG, afterG, beforeA, afterA, beforeP, afterP);
+                } else {
+                    log.debug("[Sync]  · {} ({}) — no change (GP:{} G:{} A:{} PTS:{})",
+                            player.getFullName(), player.getTeamAbbrev(), afterGP, afterG, afterA, afterP);
+                }
+                succeeded[0]++;
+            } catch (Exception e) {
+                log.error("[Sync]  ✗ {} ({}) — FAILED: {}", player.getFullName(), player.getTeamAbbrev(), e.getMessage());
+                failed[0]++;
+            }
+        }
+        if (failed[0] > 0) {
+            log.warn("[Sync] Phase 1 complete: {} ok, {} failed", succeeded[0], failed[0]);
+        }
+
+        try {
+            Map<Long, String> finishedGames = nhlApiService.getTodaysFinishedPlayoffGames();
+            if (!finishedGames.isEmpty()) {
+                log.info("[Sync] Running boxscore sync for {} finished game(s)", finishedGames.size());
+                for (long gameId : finishedGames.keySet()) {
+                    nhlApiService.syncDraftedPlayersFromBoxscore(draftedPlayers, gameId);
+                }
+            }
+        } catch (Exception e) {
+            log.error("[Sync] Boxscore phase failed: {}", e.getMessage());
+        }
+
         Set<String> eliminated = nhlApiService.getEliminatedTeamAbbrevs();
         draftedPlayers.forEach(player -> {
             if (eliminated.contains(player.getTeamAbbrev()) && !player.getEliminated()) {
                 player.setEliminated(true);
                 playerRepository.save(player);
-                log.info("Marked {} as eliminated", player.getFullName());
+                log.info("[Sync] Marked {} ({}) as ELIMINATED", player.getFullName(), player.getTeamAbbrev());
             }
         });
 
+        log.info("[Sync] Done.");
         broadcastStatsUpdated();
     }
+
 
     /**
      * Sync ALL stats (reg season + playoff + game log splits) — manual, slow
@@ -70,16 +122,6 @@ public class PlayerSyncService {
         log.info("All player stats sync complete ({} players)", total);
     }
 
-    /**
-     * Sync ONLY drafted player playoff stats — manual, fast
-     */
-    public void syncDraftedPlayoffStats() {
-        List<Player> draftedPlayers = playerRepository.findByDraftedTrue();
-        if (draftedPlayers.isEmpty()) return;
-        log.info("Syncing playoff stats for {} drafted players", draftedPlayers.size());
-        draftedPlayers.forEach(nhlApiService::syncPlayoffStats);
-        broadcastStatsUpdated();
-    }
 
     /**
      * Push a WebSocket notification so all connected clients know to refresh standings/players.

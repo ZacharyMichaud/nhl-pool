@@ -52,22 +52,18 @@ public class PlayoffSchedulerService {
     @PostConstruct
     @Scheduled(cron = "0 0 * * * *") // every hour (on the hour), UTC
     public void refreshTodaysSchedule() {
-        log.info("[Scheduler] Refreshing today's playoff schedule...");
+        log.debug("[Scheduler] Refreshing today's playoff schedule...");
         Map<Long, Instant> games = nhlApiService.getTodaysPlayoffGames();
 
         todaysGames.clear();
         todaysGames.putAll(games);
-        // Remove tracking state only for NEW games (preserve progress on games still running)
-        games.keySet().forEach(id -> {
-            lastSortOrder.putIfAbsent(id, 0);
-        });
+        games.keySet().forEach(id -> lastSortOrder.putIfAbsent(id, 0));
         processedGames.removeIf(id -> !games.containsKey(id));
 
         if (games.isEmpty()) {
-            log.info("[Scheduler] No playoff games today — live watcher will be a no-op.");
+            log.debug("[Scheduler] No playoff games today — live watcher will be a no-op.");
         } else {
-            log.info("[Scheduler] Tracking {} game(s) today: {}", games.size(), games.keySet());
-            // Catch-up: if any games are already finished (server restarted after game ended), sync now
+            log.debug("[Scheduler] Tracking {} game(s) today: {}", games.size(), games.keySet());
             catchUpFinishedGames(games);
         }
     }
@@ -77,23 +73,21 @@ public class PlayoffSchedulerService {
      * in a finished state so we don't wait 30s for the live watcher to pick them up.
      */
     private void catchUpFinishedGames(Map<Long, Instant> games) {
-        boolean triggeredSync = false;
         for (long gameId : games.keySet()) {
             if (processedGames.contains(gameId)) continue;
             String state = nhlApiService.getGameState(gameId);
             if ("OFF".equals(state) || "FINAL".equals(state) || "7".equals(state)) {
-                log.info("[Scheduler] Catch-up: game {} already finished ({}). Triggering sync.", gameId, state);
+                log.info("[Scheduler] Catch-up: game {} already finished ({}). Running boxscore + series sync.", gameId, state);
                 processedGames.add(gameId);
-                triggeredSync = true;
-            }
-        }
-        if (triggeredSync) {
-            try {
-                seriesSyncService.syncSeriesFromApi();
-                playerSyncService.syncDraftedPlayerStats();
-                log.info("[Scheduler] Catch-up sync complete.");
-            } catch (Exception e) {
-                log.error("[Scheduler] Error during catch-up sync", e);
+                try {
+                    List<Player> drafted = playerRepository.findByDraftedTrue();
+                    nhlApiService.syncDraftedPlayersFromBoxscore(drafted, gameId);
+                    seriesSyncService.syncSeriesFromApi();
+                    playerSyncService.broadcastStatsUpdated();
+                    log.info("[Scheduler] Catch-up sync complete for game {}.", gameId);
+                } catch (Exception e) {
+                    log.error("[Scheduler] Error during catch-up sync for game {}", gameId, e);
+                }
             }
         }
     }
@@ -136,12 +130,16 @@ public class PlayoffSchedulerService {
             }
 
             if ("OFF".equals(gameState) || "FINAL".equals(gameState) || "7".equals(gameState)) {
-                // Game just finished — do the full syncs
-                log.info("[Scheduler] Game {} is FINISHED ({}). Running full series + player stats sync.", gameId, gameState);
+                // Game just finished — use boxscore for INSTANT stats (game-log lags 2-4h)
+                log.info("[Scheduler] Game {} is FINISHED ({}). Running boxscore + series sync.", gameId, gameState);
                 try {
+                    List<Player> drafted = playerRepository.findByDraftedTrue();
+                    // Phase 1: immediate boxscore stats (live, no delay)
+                    nhlApiService.syncDraftedPlayersFromBoxscore(drafted, gameId);
+                    // Phase 2: series scores
                     seriesSyncService.syncSeriesFromApi();
-                    playerSyncService.syncDraftedPlayerStats();
-                    log.info("[Scheduler] Full sync complete after game {} ended.", gameId);
+                    playerSyncService.broadcastStatsUpdated();
+                    log.info("[Scheduler] Post-game sync complete for game {}.", gameId);
                 } catch (Exception e) {
                     log.error("[Scheduler] Error during post-game sync for game {}", gameId, e);
                 }
@@ -196,21 +194,22 @@ public class PlayoffSchedulerService {
             lastSortOrder.put(gameId, maxSortOrder);
         }
 
-        // Sync only the players involved in new goals
+        // Sync players involved in new goals — use boxscore for the LIVE game
+        // (game-log won't reflect in-progress goals; boxscore updates in real-time)
         if (!nhlPlayerIdsToSync.isEmpty()) {
-            log.info("[Scheduler] Syncing stats for {} player(s) due to new goal event(s) in game {}",
-                    nhlPlayerIdsToSync.size(), gameId);
-            nhlPlayerIdsToSync.stream()
+            log.info("[Scheduler] New goal(s) in game {} — syncing boxscore for affected drafted players", gameId);
+            List<Player> involved = nhlPlayerIdsToSync.stream()
                     .distinct()
-                    .forEach(nhlId -> playerRepository.findByNhlPlayerId(nhlId).ifPresent(player -> {
-                        if (player.getDrafted()) {
-                            nhlApiService.syncPlayoffStats(player);
-                            log.info("[Scheduler] Synced stats for drafted player: {} ({})",
-                                    player.getFullName(), player.getTeamAbbrev());
-                        }
-                    }));
-            // Notify all connected clients
-            playerSyncService.broadcastStatsUpdated();
+                    .map(nhlId -> playerRepository.findByNhlPlayerId(nhlId).orElse(null))
+                    .filter(p -> p != null && p.getDrafted())
+                    .toList();
+
+            if (!involved.isEmpty()) {
+                nhlApiService.syncDraftedPlayersFromBoxscore(involved, gameId);
+                playerSyncService.broadcastStatsUpdated();
+            } else {
+                log.debug("[Scheduler] No drafted players involved in new goal(s) — no sync needed");
+            }
         }
     }
 }

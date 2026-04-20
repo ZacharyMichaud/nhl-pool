@@ -28,23 +28,37 @@ public class AdminController {
     private final SeriesRepository seriesRepository;
     private final DraftPickRepository draftPickRepository;
     private final DraftConfigRepository draftConfigRepository;
+    private final PlayerRepository playerRepository;
 
     @PostMapping("/sync/rosters")
-    public ResponseEntity<String> syncRosters() {
+    public ResponseEntity<Map<String, String>> syncRosters() {
         playerSyncService.syncAllPlayoffRosters();
-        return ResponseEntity.ok("Roster sync initiated");
+        return ResponseEntity.ok(Map.of("message", "Roster sync complete"));
     }
 
     @PostMapping("/sync/stats")
-    public ResponseEntity<String> syncStats() {
+    public ResponseEntity<Map<String, String>> syncStats() {
         playerSyncService.syncDraftedPlayerStats();
-        return ResponseEntity.ok("Stats sync initiated");
+        return ResponseEntity.ok(Map.of("message", "Stats sync complete"));
     }
 
     @PostMapping("/sync/all-stats")
-    public ResponseEntity<String> syncAllStats() {
+    public ResponseEntity<Map<String, String>> syncAllStats() {
         playerSyncService.syncAllPlayerStats();
-        return ResponseEntity.ok("Full stats sync initiated");
+        return ResponseEntity.ok(Map.of("message", "Full stats sync complete"));
+    }
+
+    /**
+     * Sync stats directly from a game's boxscore — instant, no NHL processing delay.
+     * Use this for games that just ended whose stats haven't appeared in game-log yet.
+     * Find the game ID on NHL.com: the number in the URL when viewing a game.
+     */
+    @PostMapping("/sync/boxscore/{gameId}")
+    public ResponseEntity<Map<String, String>> syncFromBoxscore(@PathVariable Long gameId) {
+        List<Player> drafted = playerRepository.findByDraftedTrue();
+        nhlApiService.syncDraftedPlayersFromBoxscore(drafted, gameId);
+        playerSyncService.broadcastStatsUpdated();
+        return ResponseEntity.ok(Map.of("message", "Boxscore sync complete for game " + gameId));
     }
 
     @GetMapping("/scoring-rules")
@@ -139,9 +153,9 @@ public class AdminController {
 
     // Sync series from NHL API
     @PostMapping("/sync/series")
-    public ResponseEntity<String> syncSeries() {
+    public ResponseEntity<Map<String, String>> syncSeries() {
         seriesSyncService.syncSeriesFromApi();
-        return ResponseEntity.ok("Series synced from NHL API");
+        return ResponseEntity.ok(Map.of("message", "Series sync complete"));
     }
 
     @GetMapping("/users")

@@ -100,23 +100,47 @@ export class AdminComponent implements OnInit, OnDestroy {
   }
 
   syncStats() {
+    console.log('[Admin] syncStats() called — POSTing to /api/admin/sync/stats');
     this.api.syncStats().subscribe({
-      next: () => this.show('Stats synced!'),
-      error: (e) => this.show(e.error?.error || 'Failed'),
+      next: (res) => {
+        console.log('[Admin] syncStats() success:', res);
+        this.show('Stats synced! Reloading data...');
+        this.loadAll();
+      },
+      error: (e) => {
+        console.error('[Admin] syncStats() error:', e);
+        this.show(e.error?.error || e.message || 'Sync failed');
+      },
     });
   }
 
   syncAllStats() {
+    console.log('[Admin] syncAllStats() called — POSTing to /api/admin/sync/all-stats');
     this.api.syncAllStats().subscribe({
-      next: () => this.show('All stats synced!'),
-      error: (e) => this.show(e.error?.error || 'Failed'),
+      next: (res) => {
+        console.log('[Admin] syncAllStats() success:', res);
+        this.show('All stats synced! Reloading data...');
+        this.loadAll();
+      },
+      error: (e) => {
+        console.error('[Admin] syncAllStats() error:', e);
+        this.show(e.error?.error || e.message || 'Sync failed');
+      },
     });
   }
 
   syncSeries() {
+    console.log('[Admin] syncSeries() called — POSTing to /api/admin/sync/series');
     this.api.syncSeries().subscribe({
-      next: () => this.show('Series synced!'),
-      error: (e) => this.show(e.error?.error || 'Failed'),
+      next: (res) => {
+        console.log('[Admin] syncSeries() success:', res);
+        this.show('Series synced!');
+        this.loadAll();
+      },
+      error: (e) => {
+        console.error('[Admin] syncSeries() error:', e);
+        this.show(e.error?.error || e.message || 'Sync failed');
+      },
     });
   }
 

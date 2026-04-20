@@ -128,16 +128,14 @@ export class DraftEventService implements OnDestroy {
   }
 
   /**
-   * Converts the HTTP(S) API base URL to a ws:// / wss:// WebSocket URL.
+   * Returns the WebSocket broker URL.
    *
-   * Examples:
-   *   http://localhost:8080/api  →  ws://localhost:8080/ws-native
-   *   https://myapp.onrender.com/api  →  wss://myapp.onrender.com/ws-native
+   * In production: connects directly to Railway (bypasses Vercel, which cannot proxy WS).
+   * In dev:        connects to localhost:8080.
+   *
+   * Both values come from environment.wsUrl set per-environment.
    */
   private resolveWsUrl(): string {
-    const apiUrl = environment.apiUrl;
-    const base = apiUrl.replace(/\/api$/, '');
-    const wsBase = base.replace(/^https:\/\//, 'wss://').replace(/^http:\/\//, 'ws://');
-    return `${wsBase}/ws-native`;
+    return environment.wsUrl;
   }
 }
