@@ -19,6 +19,7 @@ export interface DraftPickEvent {
 export class DraftEventService implements OnDestroy {
   private client: Client | null = null;
   private pickSubject = new Subject<DraftPickEvent>();
+  private statsUpdateSubject = new Subject<number>();
 
   /** Consecutive failure tracking for exponential backoff */
   private failureCount = 0;
@@ -28,6 +29,9 @@ export class DraftEventService implements OnDestroy {
 
   /** Observable that emits every time any user makes a draft pick. */
   readonly picks$ = this.pickSubject.asObservable();
+
+  /** Observable that emits (with a timestamp) whenever the backend syncs player stats. */
+  readonly statsUpdated$ = this.statsUpdateSubject.asObservable();
 
   /**
    * Connect to the backend via native WebSocket + STOMP.
@@ -53,6 +57,15 @@ export class DraftEventService implements OnDestroy {
           try {
             const event: DraftPickEvent = JSON.parse(msg.body);
             this.pickSubject.next(event);
+          } catch {
+            // ignore malformed messages
+          }
+        });
+
+        this.client!.subscribe('/topic/stats-updated', (msg: IMessage) => {
+          try {
+            const ts = Number(msg.body);
+            this.statsUpdateSubject.next(ts);
           } catch {
             // ignore malformed messages
           }

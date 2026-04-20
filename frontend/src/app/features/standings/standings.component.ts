@@ -1,9 +1,10 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, of, Subscription } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { DraftEventService } from '../../core/draft-event.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
 import { PoolBadgeComponent } from '../../shared/components/pool-badge/pool-badge.component';
@@ -18,10 +19,12 @@ const WEST_CODES = new Set(['E', 'F', 'G', 'H']);
   templateUrl: './standings.component.html',
   styleUrl: './standings.component.scss',
 })
-export class StandingsComponent implements OnInit {
+export class StandingsComponent implements OnInit, OnDestroy {
   private api    = inject(ApiService);
   private router = inject(Router);
   protected auth = inject(AuthService);
+  private draftEvent = inject(DraftEventService);
+  private statsSub?: Subscription;
 
   standings         = signal<any[]>([]);
   series            = signal<any[]>([]);
@@ -50,6 +53,7 @@ export class StandingsComponent implements OnInit {
   eastSeries = computed(() => this.series().filter(s => !WEST_CODES.has(s.seriesCode?.toUpperCase())));
 
   ngOnInit() {
+    this.draftEvent.connect();
     forkJoin({
       standings: this.api.getStandings().pipe(catchError(() => of([]))),
       config:    this.api.getDraftConfig().pipe(catchError(() => of(null))),
@@ -60,6 +64,18 @@ export class StandingsComponent implements OnInit {
       this.predictionsLocked.set(locked);
       this.loadRound(1, locked);
     });
+
+    // Reload standings whenever the backend broadcasts a stats update
+    this.statsSub = this.draftEvent.statsUpdated$.subscribe(() => {
+      this.api.getStandings().pipe(catchError(() => of([]))).subscribe(standings => {
+        this.standings.set(standings);
+        this.allTeams.set(standings);
+      });
+    });
+  }
+
+  ngOnDestroy() {
+    this.statsSub?.unsubscribe();
   }
 
   selectRound(round: number) {

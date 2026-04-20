@@ -58,12 +58,16 @@ public class NhlApiService {
 
             if (schedule == null || !schedule.has("gameWeek")) return Map.of();
 
-            String today = LocalDate.now(ZoneOffset.UTC).toString(); // e.g. "2026-04-19"
+            // The NHL API uses Eastern-time dates (e.g. "2026-04-19"), but if this server
+            // runs in UTC, LocalDate.now(UTC) can already be "2026-04-20" after 8 PM ET.
+            // Check both today and yesterday (UTC) so we never miss tonight's games.
+            String todayUtc = LocalDate.now(ZoneOffset.UTC).toString();
+            String yesterdayUtc = LocalDate.now(ZoneOffset.UTC).minusDays(1).toString();
             Map<Long, Instant> result = new LinkedHashMap<>();
 
             schedule.get("gameWeek").forEach(dayNode -> {
                 String date = dayNode.path("date").asText("");
-                if (!date.equals(today)) return;
+                if (!date.equals(todayUtc) && !date.equals(yesterdayUtc)) return;
 
                 dayNode.path("games").forEach(game -> {
                     int gameType = game.path("gameType").asInt(0);
@@ -77,7 +81,8 @@ public class NhlApiService {
                 });
             });
 
-            log.info("Found {} playoff game(s) today ({})", result.size(), today);
+            log.info("Found {} playoff game(s) for dates [{}, {}]: {}",
+                    result.size(), yesterdayUtc, todayUtc, result.keySet());
             return result;
         } catch (Exception e) {
             log.error("Failed to fetch today's playoff schedule", e);

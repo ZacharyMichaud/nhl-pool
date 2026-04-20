@@ -1,10 +1,11 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { ApiService } from '../../core/api.service';
+import { DraftEventService } from '../../core/draft-event.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
 import { PoolBadgeComponent } from '../../shared/components/pool-badge/pool-badge.component';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 
 type SortCol = 'pts' | 'g' | 'a' | 'gp' | 'ppg' | 'ppp' | 'toi';
 
@@ -15,8 +16,10 @@ type SortCol = 'pts' | 'g' | 'a' | 'gp' | 'ppg' | 'ppp' | 'toi';
   templateUrl: './players.component.html',
   styleUrl: './players.component.scss',
 })
-export class PlayersComponent implements OnInit {
+export class PlayersComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
+  private draftEvent = inject(DraftEventService);
+  private statsSub?: Subscription;
 
   allPicks       = signal<any[]>([]);
   poolTeams      = signal<any[]>([]);
@@ -118,6 +121,7 @@ export class PlayersComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.draftEvent.connect();
     forkJoin({
       picks: this.api.getDraftedPlayoffStats(),
       teams: this.api.getTeams(),
@@ -128,5 +132,14 @@ export class PlayersComponent implements OnInit {
       },
       error: () => {},
     });
+
+    // Reload player stats whenever the backend broadcasts a sync
+    this.statsSub = this.draftEvent.statsUpdated$.subscribe(() => {
+      this.api.getDraftedPlayoffStats().subscribe(picks => this.allPicks.set(picks));
+    });
+  }
+
+  ngOnDestroy() {
+    this.statsSub?.unsubscribe();
   }
 }

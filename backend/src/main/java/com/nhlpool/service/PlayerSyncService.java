@@ -4,6 +4,7 @@ import com.nhlpool.domain.Player;
 import com.nhlpool.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,6 +17,7 @@ public class PlayerSyncService {
 
     private final NhlApiService nhlApiService;
     private final PlayerRepository playerRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /**
      * Sync playoff rosters — typically called once at startup or by admin
@@ -50,6 +52,8 @@ public class PlayerSyncService {
                 log.info("Marked {} as eliminated", player.getFullName());
             }
         });
+
+        broadcastStatsUpdated();
     }
 
     /**
@@ -74,5 +78,18 @@ public class PlayerSyncService {
         if (draftedPlayers.isEmpty()) return;
         log.info("Syncing playoff stats for {} drafted players", draftedPlayers.size());
         draftedPlayers.forEach(nhlApiService::syncPlayoffStats);
+        broadcastStatsUpdated();
+    }
+
+    /**
+     * Push a WebSocket notification so all connected clients know to refresh standings/players.
+     */
+    public void broadcastStatsUpdated() {
+        try {
+            messagingTemplate.convertAndSend("/topic/stats-updated", System.currentTimeMillis());
+            log.info("[WS] Broadcast stats-updated to /topic/stats-updated");
+        } catch (Exception e) {
+            log.warn("[WS] Failed to broadcast stats-updated", e);
+        }
     }
 }
