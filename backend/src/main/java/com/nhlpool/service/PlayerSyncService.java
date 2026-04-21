@@ -49,8 +49,7 @@ public class PlayerSyncService {
             return;
         }
 
-        log.info("[Sync] Syncing playoff stats for {} drafted players...", draftedPlayers.size());
-        int[] succeeded = {0}, failed = {0};
+        int[] succeeded = {0}, failed = {0}, changed = {0};
 
         for (Player player : draftedPlayers) {
             int beforeG  = player.getPlayoffGoals()       != null ? player.getPlayoffGoals()       : 0;
@@ -63,9 +62,10 @@ public class PlayerSyncService {
                 int afterA  = player.getPlayoffAssists()     != null ? player.getPlayoffAssists()     : 0;
                 int afterP  = player.getPlayoffPoints()      != null ? player.getPlayoffPoints()      : 0;
                 int afterGP = player.getPlayoffGamesPlayed() != null ? player.getPlayoffGamesPlayed() : 0;
-                boolean changed = afterG != beforeG || afterA != beforeA || afterP != beforeP || afterGP != beforeGP;
-                if (changed) {
-                    log.info("[Sync]  ✓ {} ({}) — GP:{}->{} G:{}->{} A:{}->{} PTS:{}→{}",
+                boolean wasChanged = afterG != beforeG || afterA != beforeA || afterP != beforeP || afterGP != beforeGP;
+                if (wasChanged) {
+                    changed[0]++;
+                    log.info("[Sync]  ✓ {} ({}) — GP:{}->{} G:{}->{} A:{}->{} PTS:{}->{}",
                             player.getFullName(), player.getTeamAbbrev(),
                             beforeGP, afterGP, beforeG, afterG, beforeA, afterA, beforeP, afterP);
                 } else {
@@ -103,7 +103,11 @@ public class PlayerSyncService {
             }
         });
 
-        log.info("[Sync] Done.");
+        if (changed[0] > 0) {
+            log.info("[Sync] Done — {} player(s) updated.", changed[0]);
+        } else {
+            log.debug("[Sync] Done — no stat changes detected.");
+        }
         broadcastStatsUpdated();
     }
 

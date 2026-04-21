@@ -146,7 +146,6 @@ public class PlayoffSchedulerService {
 
             } else if ("LIVE".equals(gameState) || "CRIT".equals(gameState)) {
                 // Game is live — check for new goals
-                log.debug("[Scheduler] Game {} is LIVE — checking play-by-play", gameId);
                 checkForNewGoals(gameId);
 
             } else {
@@ -189,6 +188,9 @@ public class PlayoffSchedulerService {
         // syncDraftedPlayersFromBoxscore skips players not in this game automatically.
         if (newGoalDetected) {
             List<Player> drafted = playerRepository.findByDraftedTrue();
+            log.info("[Scheduler] Goal in game {} — syncing boxscore for {} drafted player(s): {}",
+                    gameId, drafted.size(),
+                    drafted.stream().map(p -> p.getFullName() + " (" + p.getTeamAbbrev() + ")").toList());
             nhlApiService.syncDraftedPlayersFromBoxscore(drafted, gameId);
             playerSyncService.broadcastStatsUpdated();
         }

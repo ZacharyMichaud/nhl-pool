@@ -315,7 +315,6 @@ public class NhlApiService {
             if (landing != null) {
                 String state = landing.path("gameState").asText("");
                 if (!state.isEmpty()) {
-                    log.info("[GameState] Game {} resolved via gamecenter landing: {}", gameId, state);
                     return state;
                 }
             }
