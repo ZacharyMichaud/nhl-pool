@@ -188,11 +188,11 @@ public class PlayoffSchedulerService {
         // syncDraftedPlayersFromBoxscore skips players not in this game automatically.
         if (newGoalDetected) {
             List<Player> drafted = playerRepository.findByDraftedTrue();
-            log.info("[Scheduler] Goal in game {} — syncing boxscore for {} drafted player(s): {}",
-                    gameId, drafted.size(),
-                    drafted.stream().map(p -> p.getFullName() + " (" + p.getTeamAbbrev() + ")").toList());
-            nhlApiService.syncDraftedPlayersFromBoxscore(drafted, gameId);
-            playerSyncService.broadcastStatsUpdated();
+            if (!drafted.isEmpty()) {
+                log.info("[Scheduler] Goal in game {} — running boxscore sync ({} players)", gameId, drafted.size());
+                nhlApiService.syncDraftedPlayersFromBoxscore(drafted, gameId);
+                playerSyncService.broadcastStatsUpdated();
+            }
         }
     }
 

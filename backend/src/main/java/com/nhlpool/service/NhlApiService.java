@@ -263,9 +263,15 @@ public class NhlApiService {
                 player.setPlayoffAvgToi(avgToi);
                 playerRepository.save(player);
 
-                log.info("[Boxscore] {} ({}) — game {} stats: G:{} A:{} PTS:{} | season totals now: GP:{} G:{} A:{} PTS:{}",
-                        player.getFullName(), player.getTeamAbbrev(), gameId,
-                        g, a, pts, totalGP, totalG, totalA, totalPts);
+                if (g + a > 0) {
+                    log.info("[Boxscore] {} ({}) — game {} stats: G:{} A:{} PTS:{} | season totals now: GP:{} G:{} A:{} PTS:{}",
+                            player.getFullName(), player.getTeamAbbrev(), gameId,
+                            g, a, pts, totalGP, totalG, totalA, totalPts);
+                } else {
+                    log.debug("[Boxscore] {} ({}) — game {} stats: G:0 A:0 (no points this game), totals GP:{} G:{} A:{}",
+                            player.getFullName(), player.getTeamAbbrev(), gameId, totalGP, totalG, totalA);
+                }
+
             }
         } catch (Exception e) {
             log.error("[Boxscore] Failed to sync from boxscore for game {}: {}", gameId, e.getMessage());
