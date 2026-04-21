@@ -166,49 +166,32 @@ public class PlayoffSchedulerService {
 
         int knownSortOrder = lastSortOrder.getOrDefault(gameId, 0);
         int maxSortOrder = knownSortOrder;
-        List<Long> nhlPlayerIdsToSync = new ArrayList<>();
+        boolean newGoalDetected = false;
 
         for (JsonNode play : plays) {
             int sortOrder = play.path("sortOrder").asInt(0);
-            if (sortOrder <= knownSortOrder) continue; // already seen
-
+            if (sortOrder <= knownSortOrder) continue;
             maxSortOrder = Math.max(maxSortOrder, sortOrder);
 
             if ("goal".equals(play.path("typeDescKey").asText(""))) {
-                JsonNode details = play.path("details");
                 log.info("[Scheduler] New goal detected in game {} (sortOrder={})", gameId, sortOrder);
-
-                long scorerId = details.path("scoringPlayerId").asLong(0);
-                long assist1Id = details.path("assist1PlayerId").asLong(0);
-                long assist2Id = details.path("assist2PlayerId").asLong(0);
-
-                if (scorerId > 0) nhlPlayerIdsToSync.add(scorerId);
-                if (assist1Id > 0) nhlPlayerIdsToSync.add(assist1Id);
-                if (assist2Id > 0) nhlPlayerIdsToSync.add(assist2Id);
+                newGoalDetected = true;
             }
         }
 
-        // Update the high-water mark regardless
         if (maxSortOrder > knownSortOrder) {
             lastSortOrder.put(gameId, maxSortOrder);
         }
 
-        // Sync players involved in new goals — use boxscore for the LIVE game
-        // (game-log won't reflect in-progress goals; boxscore updates in real-time)
-        if (!nhlPlayerIdsToSync.isEmpty()) {
-            log.info("[Scheduler] New goal(s) in game {} — syncing boxscore for affected drafted players", gameId);
-            List<Player> involved = nhlPlayerIdsToSync.stream()
-                    .distinct()
-                    .map(nhlId -> playerRepository.findByNhlPlayerId(nhlId).orElse(null))
-                    .filter(p -> p != null && p.getDrafted())
-                    .toList();
-
-            if (!involved.isEmpty()) {
-                nhlApiService.syncDraftedPlayersFromBoxscore(involved, gameId);
-                playerSyncService.broadcastStatsUpdated();
-            } else {
-                log.debug("[Scheduler] No drafted players involved in new goal(s) — no sync needed");
-            }
+        // On any new goal, sync ALL drafted players from the boxscore.
+        // We don't rely on scoringPlayerId/assist1PlayerId etc. because those
+        // field names and IDs can differ from the boxscore's playerId field.
+        // syncDraftedPlayersFromBoxscore skips players not in this game automatically.
+        if (newGoalDetected) {
+            List<Player> drafted = playerRepository.findByDraftedTrue();
+            nhlApiService.syncDraftedPlayersFromBoxscore(drafted, gameId);
+            playerSyncService.broadcastStatsUpdated();
         }
     }
+
 }

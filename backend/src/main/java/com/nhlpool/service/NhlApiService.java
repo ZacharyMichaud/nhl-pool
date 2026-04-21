@@ -198,7 +198,7 @@ public class NhlApiService {
             for (Player player : draftedPlayers) {
                 JsonNode stats = boxscoreStats.get(player.getNhlPlayerId());
                 if (stats == null) {
-                    log.debug("[Boxscore] {} not in boxscore for game {} (did not play)", player.getFullName(), gameId);
+                    log.debug("[Boxscore] {} not in boxscore for game {} (not playing in this game)", player.getFullName(), gameId);
                     continue;
                 }
 

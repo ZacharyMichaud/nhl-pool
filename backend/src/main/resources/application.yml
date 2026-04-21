@@ -1,4 +1,6 @@
 spring:
+  jackson:
+    time-zone: America/New_York
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/nhlpool}
     username: ${DB_USER:nhlpool}
@@ -9,6 +11,8 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: America/New_York
     open-in-view: false
 
 server:

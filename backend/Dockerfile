@@ -12,4 +12,4 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-Xmx256m", "-XX:+UseSerialGC", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Xmx256m", "-XX:+UseSerialGC", "-Duser.timezone=America/New_York", "-jar", "app.jar"]
