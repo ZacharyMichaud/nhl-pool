@@ -41,6 +41,44 @@ public class PlayoffSchedulerService {
     /** gameIds that have already been fully processed (went OFF) */
     private final Set<Long> processedGames = ConcurrentHashMap.newKeySet();
 
+    /**
+     * Tracks how many post-game boxscore syncs we've done per game.
+     * We run 3 passes (at t=0, t+30s, t+60s) before marking a game processed,
+     * giving the NHL API time to finalize OT goal stats and series results.
+     */
+    private final Map<Long, Integer> postGameSyncCount = new ConcurrentHashMap<>();
+    private static final int POST_GAME_SYNCS = 3;
+
+    /**
+     * Returns the set of NHL team abbreviations that are actively playing in a live
+     * playoff game right now (gameState LIVE or CRIT).
+     * Uses the cached todaysGames schedule; falls back to on-demand API call if empty.
+     */
+    public Set<String> getLiveTeamAbbrevs() {
+        Set<String> liveAbbrevs = new HashSet<>();
+        try {
+            Map<Long, Instant> games = todaysGames.isEmpty()
+                    ? nhlApiService.getTodaysPlayoffGames()
+                    : todaysGames;
+
+            Instant now = Instant.now();
+            for (Map.Entry<Long, Instant> entry : games.entrySet()) {
+                long gameId = entry.getKey();
+                if (now.isBefore(entry.getValue())) continue; // not started yet
+                if (processedGames.contains(gameId)) continue; // already finished
+                String state = nhlApiService.getGameState(gameId);
+                if ("LIVE".equals(state) || "CRIT".equals(state)) {
+                    // Fetch team abbrevs from the schedule
+                    Set<String> teams = nhlApiService.getTeamAbbrevsForGame(gameId);
+                    liveAbbrevs.addAll(teams);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[LiveGames] Failed to determine live teams: {}", e.getMessage());
+        }
+        return liveAbbrevs;
+    }
+
     // -------------------------------------------------------------------------
     // Job 1: Daily schedule refresh
     // -------------------------------------------------------------------------
@@ -129,20 +167,29 @@ public class PlayoffSchedulerService {
             }
 
             if ("OFF".equals(gameState) || "FINAL".equals(gameState) || "7".equals(gameState)) {
-                // Game just finished — use boxscore for INSTANT stats (game-log lags 2-4h)
-                log.info("[Scheduler] Game {} is FINISHED ({}). Running boxscore + series sync.", gameId, gameState);
-                try {
-                    List<Player> drafted = playerRepository.findByDraftedTrue();
-                    // Phase 1: immediate boxscore stats (live, no delay)
-                    nhlApiService.syncDraftedPlayersFromBoxscore(drafted, gameId);
-                    // Phase 2: series scores
-                    seriesSyncService.syncSeriesFromApi();
-                    playerSyncService.broadcastStatsUpdated();
-                    log.info("[Scheduler] Post-game sync complete for game {}.", gameId);
-                } catch (Exception e) {
-                    log.error("[Scheduler] Error during post-game sync for game {}", gameId, e);
+                int pass = postGameSyncCount.getOrDefault(gameId, 0);
+
+                if (pass < POST_GAME_SYNCS) {
+                    postGameSyncCount.put(gameId, pass + 1);
+                    if (pass == 0) {
+                        log.info("[Scheduler] Game {} is FINISHED ({}). Running post-game sync (pass 1/{}).",
+                                gameId, gameState, POST_GAME_SYNCS);
+                    } else {
+                        log.info("[Scheduler] Game {} — follow-up sync (pass {}/{}) to catch API-finalized stats.",
+                                gameId, pass + 1, POST_GAME_SYNCS);
+                    }
+                    try {
+                        List<Player> drafted = playerRepository.findByDraftedTrue();
+                        nhlApiService.syncDraftedPlayersFromBoxscore(drafted, gameId);
+                        seriesSyncService.syncSeriesFromApi();
+                        playerSyncService.broadcastStatsUpdated();
+                    } catch (Exception e) {
+                        log.error("[Scheduler] Error during post-game sync (pass {}) for game {}", pass + 1, gameId, e);
+                    }
+                } else {
+                    log.info("[Scheduler] Game {} — all {} post-game syncs done, marking complete.", gameId, POST_GAME_SYNCS);
+                    processedGames.add(gameId);
                 }
-                processedGames.add(gameId);
 
             } else if ("LIVE".equals(gameState) || "CRIT".equals(gameState)) {
                 // Game is live — check for new goals

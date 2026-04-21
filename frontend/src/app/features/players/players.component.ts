@@ -2,6 +2,7 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { ApiService } from '../../core/api.service';
 import { DraftEventService } from '../../core/draft-event.service';
+import { LiveGameService } from '../../core/live-game.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
 import { PoolBadgeComponent } from '../../shared/components/pool-badge/pool-badge.component';
@@ -19,6 +20,7 @@ type SortCol = 'pts' | 'g' | 'a' | 'gp' | 'ppg' | 'ppp' | 'toi';
 export class PlayersComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private draftEvent = inject(DraftEventService);
+  protected liveGame = inject(LiveGameService);
   private statsSub?: Subscription;
 
   allPicks       = signal<any[]>([]);

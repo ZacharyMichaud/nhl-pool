@@ -37,8 +37,14 @@
               <div class="p-cell">
                 <img [src]="pick.player?.headshotUrl" class="p-headshot" loading="lazy" onerror="this.style.display='none'">
                 <div class="p-info">
-                  <span class="p-name desktop-only">{{ pick.player?.firstName }} {{ pick.player?.lastName }}</span>
-                  <span class="p-name mobile-only">{{ pick.player?.firstName | slice:0:1 }}. {{ pick.player?.lastName }}</span>
+                  <span class="p-name desktop-only">
+                    {{ pick.player?.firstName }} {{ pick.player?.lastName }}
+                    <span class="live-badge" *ngIf="liveGame.isLive(pick.player?.teamAbbrev)">LIVE</span>
+                  </span>
+                  <span class="p-name mobile-only">
+                    {{ pick.player?.firstName | slice:0:1 }}. {{ pick.player?.lastName }}
+                    <span class="live-badge" *ngIf="liveGame.isLive(pick.player?.teamAbbrev)">LIVE</span>
+                  </span>
                   <span class="p-team desktop-only">{{ pick.player?.teamAbbrev }}</span>
                   <app-pool-badge class="mobile-only" [name]="pick.team?.name" [colorIndex]="teamColorIndex(pick.team?.id)"></app-pool-badge>
                 </div>
@@ -88,6 +94,7 @@
           <div class="pm-meta">
             <span class="pm-pos">{{ formatPosition(pick.player?.position) }}</span>
             <span class="pm-nhl-team">{{ pick.player?.teamAbbrev }}</span>
+            <span class="live-badge" *ngIf="liveGame.isLive(pick.player?.teamAbbrev)">LIVE</span>
           </div>
           <app-pool-badge
             [name]="pick.team?.name"

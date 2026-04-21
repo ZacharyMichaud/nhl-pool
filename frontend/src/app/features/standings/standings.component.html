@@ -113,10 +113,9 @@
 <ng-template #seriesCard let-s>
   <div class="series-card card">
 
-    <!-- Status bar -->
-    <div class="series-status" [class.complete]="s.winnerAbbrev">
-      <span class="status-dot" [class.active]="!s.winnerAbbrev"></span>
-      <span>{{ s.winnerAbbrev ? ('🏆 ' + s.winnerAbbrev + ' wins') : 'In Progress' }}</span>
+    <!-- Status bar: ONLY shown when series has a winner -->
+    <div class="series-status complete" *ngIf="s.winnerAbbrev">
+      🏆 {{ s.winnerAbbrev }} wins in {{ s.topSeedWins + s.bottomSeedWins }} games
     </div>
 
     <!-- Matchup -->
@@ -128,9 +127,15 @@
         <span class="team-abbrev">{{ s.topSeedAbbrev }}</span>
       </div>
       <div class="score-block">
-        <span class="score">{{ s.topSeedWins }}</span>
-        <span class="score-sep">–</span>
-        <span class="score">{{ s.bottomSeedWins }}</span>
+        <div class="score-row">
+          <span class="score">{{ s.topSeedWins }}</span>
+          <span class="score-sep">–</span>
+          <span class="score">{{ s.bottomSeedWins }}</span>
+        </div>
+        <span class="live-indicator"
+              *ngIf="!s.winnerAbbrev && (liveGame.isLive(s.topSeedAbbrev) || liveGame.isLive(s.bottomSeedAbbrev))">
+          LIVE
+        </span>
       </div>
       <div class="team-side right"
            [class.winner]="s.winnerAbbrev === s.bottomSeedAbbrev"
@@ -140,9 +145,40 @@
       </div>
     </div>
 
+    <!-- Pick-result strip: compact row shown when series is done + predictions locked -->
+    <ng-container *ngIf="s.winnerAbbrev && predictionsLocked()">
+      <div class="pick-result-strip">
+        <div *ngFor="let entry of getAllPredsForSeries(s.id)"
+             class="strip-entry"
+             [class.strip-correct]="entry.pred && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
+             [class.strip-wrong]="entry.pred && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev"
+             [class.strip-no-pick]="!entry.pred">
+          <app-pool-badge [name]="entry.teamName" [colorIndex]="teamColorIndex(entry.teamId)"></app-pool-badge>
+          <ng-container *ngIf="entry.pred; else noPredMark">
+            <span *ngIf="entry.pred.predictedWinnerAbbrev === s.winnerAbbrev" class="mark-correct">✓</span>
+            <span *ngIf="entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev" class="mark-wrong">✗</span>
+            <span class="strip-games"
+                  [class.strip-games-exact]="entry.pred.predictedGames === (s.topSeedWins + s.bottomSeedWins)">
+              {{ entry.pred.predictedGames }}G
+            </span>
+            <!-- Points indicator (getSeriesPoints returns null=no pred/not over, else {total}) -->
+            <ng-container *ngIf="getSeriesPoints(s, entry.pred) as pts">
+              <span class="strip-pts"
+                    [class.strip-pts-win]="pts.total > 0"
+                    [class.strip-pts-bonus]="pts.gamesPts > 0"
+                    [class.strip-pts-zero]="pts.total === 0">
+                +{{ pts.total }}
+              </span>
+            </ng-container>
+          </ng-container>
+          <ng-template #noPredMark><span class="strip-no-pred">—</span></ng-template>
+        </div>
+      </div>
+    </ng-container>
+
     <div class="card-divider"></div>
 
-    <!-- LOCKED: predictions comparison -->
+    <!-- LOCKED: full predictions comparison -->
     <ng-container *ngIf="predictionsLocked(); else entryForm">
       <div class="picks-list">
         <div *ngFor="let entry of getAllPredsForSeries(s.id)"
@@ -165,7 +201,7 @@
             <span class="mark correct-mark" *ngIf="entry.pred.predictedWinnerAbbrev === s.winnerAbbrev">✓</span>
             <span class="mark wrong-mark"   *ngIf="entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">✗</span>
           </span>
-          <span class="pick-result muted" *ngIf="!s.winnerAbbrev || !entry.pred">—</span>
+          <span class="pick-result muted" *ngIf="s.winnerAbbrev && !entry.pred">—</span>
         </div>
       </div>
     </ng-container>
@@ -207,3 +243,4 @@
 
   </div>
 </ng-template>
+

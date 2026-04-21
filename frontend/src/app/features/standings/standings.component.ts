@@ -5,6 +5,7 @@ import { catchError, forkJoin, of, Subscription } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { DraftEventService } from '../../core/draft-event.service';
+import { LiveGameService } from '../../core/live-game.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
 import { PoolBadgeComponent } from '../../shared/components/pool-badge/pool-badge.component';
@@ -24,6 +25,7 @@ export class StandingsComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   protected auth = inject(AuthService);
   private draftEvent = inject(DraftEventService);
+  protected liveGame = inject(LiveGameService);
   private statsSub?: Subscription;
 
   standings         = signal<any[]>([]);
@@ -32,6 +34,7 @@ export class StandingsComponent implements OnInit, OnDestroy {
   predictionsLocked = signal(false);
   allTeams          = signal<any[]>([]);
   allTeamPredictions = signal<any[]>([]);
+  predScoringRules  = signal<any[]>([]);  // PredictionScoringRule[]
   saving            = signal(false);
   predictionDraft   = signal<Record<number, { winner: string; games: number } | undefined>>({});
 
@@ -57,9 +60,11 @@ export class StandingsComponent implements OnInit, OnDestroy {
     forkJoin({
       standings: this.api.getStandings().pipe(catchError(() => of([]))),
       config:    this.api.getDraftConfig().pipe(catchError(() => of(null))),
-    }).subscribe(({ standings, config }) => {
+      rules:     this.api.getPredictionScoringRules().pipe(catchError(() => of([]))),
+    }).subscribe(({ standings, config, rules }) => {
       this.standings.set(standings);
       this.allTeams.set(standings);
+      this.predScoringRules.set(rules);
       const locked = Boolean(config?.predictionsLocked);
       this.predictionsLocked.set(locked);
       this.loadRound(1, locked);
@@ -159,5 +164,23 @@ export class StandingsComponent implements OnInit, OnDestroy {
     if (s.topSeedAbbrev === abbrev) return s.topSeedLogoUrl || '';
     if (s.bottomSeedAbbrev === abbrev) return s.bottomSeedLogoUrl || '';
     return '';
+  }
+
+  /**
+   * Returns how many prediction points a pool team earned (or would earn if still live)
+   * for a given series + prediction entry.
+   * Returns null when the series isn't finished yet.
+   */
+  getSeriesPoints(s: any, pred: any | null): { winnerPts: number; gamesPts: number; total: number } | null {
+    if (!s.winnerAbbrev || !pred) return null;  // series not over or no prediction
+    const roundNumber: number = s.round?.roundNumber ?? this.selectedRound();
+    const rule = this.predScoringRules().find((r: any) => r.roundNumber === roundNumber);
+    if (!rule) return null;
+    const correctWinner = pred.predictedWinnerAbbrev === s.winnerAbbrev;
+    if (!correctWinner) return { winnerPts: 0, gamesPts: 0, total: 0 };
+    const winnerPts = rule.correctWinnerPoints ?? 0;
+    const exactGames = pred.predictedGames === (s.topSeedWins + s.bottomSeedWins);
+    const gamesPts = exactGames ? (rule.correctGamesBonus ?? 0) : 0;
+    return { winnerPts, gamesPts, total: winnerPts + gamesPts };
   }
 }

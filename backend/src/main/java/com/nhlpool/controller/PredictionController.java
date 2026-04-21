@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/predictions")
@@ -24,6 +25,7 @@ public class PredictionController {
     private final PoolRoundRepository poolRoundRepository;
     private final UserRepository userRepository;
     private final com.nhlpool.repository.DraftConfigRepository draftConfigRepository;
+    private final com.nhlpool.repository.PredictionScoringRuleRepository predictionScoringRuleRepository;
 
     @GetMapping("/round/{roundNumber}")
     @Transactional(readOnly = true)
@@ -97,6 +99,16 @@ public class PredictionController {
     @GetMapping("/series")
     public ResponseEntity<List<Series>> getAllSeries() {
         return ResponseEntity.ok(seriesRepository.findAllWithRound());
+    }
+
+    /**
+     * Returns the prediction scoring rules (points per round) for all rounds.
+     * Returns a map of roundNumber → { correctWinnerPoints, correctGamesBonus }
+     * so the frontend can compute earned points without admin access.
+     */
+    @GetMapping("/scoring-rules")
+    public ResponseEntity<List<PredictionScoringRule>> getPredictionScoringRules() {
+        return ResponseEntity.ok(predictionScoringRuleRepository.findAll());
     }
 
     @GetMapping("/series/round/{roundNumber}")

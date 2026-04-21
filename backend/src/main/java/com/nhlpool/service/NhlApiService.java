@@ -332,6 +332,59 @@ public class NhlApiService {
     }
 
     /**
+     * Returns the two NHL team abbreviations (home + away) for a given game ID.
+     * Checks /schedule/now first for live games, falls back to /gamecenter/{id}/landing.
+     * Returns an empty set if the game cannot be found.
+     */
+    public Set<String> getTeamAbbrevsForGame(long gameId) {
+        // 1. Try /schedule/now
+        try {
+            JsonNode schedule = nhlApiClient.get()
+                    .uri("/schedule/now")
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+            if (schedule != null) {
+                for (JsonNode dayNode : schedule.path("gameWeek")) {
+                    for (JsonNode game : dayNode.path("games")) {
+                        if (game.path("id").asLong() == gameId) {
+                            String home = game.path("homeTeam").path("abbrev").asText("");
+                            String away = game.path("awayTeam").path("abbrev").asText("");
+                            Set<String> result = new HashSet<>();
+                            if (!home.isEmpty()) result.add(home);
+                            if (!away.isEmpty()) result.add(away);
+                            return result;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch team abbrevs from schedule/now for game {}: {}", gameId, e.getMessage());
+        }
+
+        // 2. Fall back to /gamecenter/{gameId}/landing
+        try {
+            JsonNode landing = nhlApiClient.get()
+                    .uri("/gamecenter/{gameId}/landing", gameId)
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+            if (landing != null) {
+                String home = landing.path("homeTeam").path("abbrev").asText("");
+                String away = landing.path("awayTeam").path("abbrev").asText("");
+                Set<String> result = new HashSet<>();
+                if (!home.isEmpty()) result.add(home);
+                if (!away.isEmpty()) result.add(away);
+                return result;
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch team abbrevs from landing for game {}: {}", gameId, e.getMessage());
+        }
+
+        return Set.of();
+    }
+
+    /**
      * Get all team abbreviations that are in the playoffs based on the bracket data
      */
     public Set<String> getPlayoffTeamAbbrevs() {

@@ -45,10 +45,14 @@
       <div
         *ngFor="let ps of selectedTeam()?.playerScores || []"
         class="player-card"
-        [class.eliminated]="ps.eliminated">
+        [class.eliminated]="ps.eliminated"
+        [class.playing-live]="liveGame.isLive(ps.teamAbbrev)">
         <img [src]="ps.headshotUrl" class="pc-headshot" loading="lazy" onerror="this.style.display='none'">
         <div class="pc-body">
-          <span class="pc-name">{{ ps.playerName }}</span>
+          <span class="pc-name">
+            {{ ps.playerName }}
+            <span class="live-badge" *ngIf="liveGame.isLive(ps.teamAbbrev)">LIVE</span>
+          </span>
           <span class="pc-meta">{{ ps.position }} · {{ ps.teamAbbrev }}</span>
           <span *ngIf="ps.eliminated" class="pc-elim">ELIMINATED</span>
         </div>

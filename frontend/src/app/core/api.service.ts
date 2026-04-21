@@ -33,6 +33,10 @@ export class ApiService {
     return this.http.get<any[]>(`${ API }/players/drafted-playoff-stats`, { params });
   }
 
+  getLiveGames(): Observable<string[]> {
+    return this.http.get<string[]>(`${ API }/players/live-games`);
+  }
+
   // Draft
   getDraftConfig(): Observable<any> { return this.http.get(`${ API }/draft/config`); }
 
@@ -83,6 +87,10 @@ export class ApiService {
 
   getAllTeamsPredictions(roundNumber: number): Observable<any[]> {
     return this.http.get<any[]>(`${ API }/predictions/all-teams/round/${ roundNumber }`);
+  }
+
+  getPredictionScoringRules(): Observable<any[]> {
+    return this.http.get<any[]>(`${ API }/predictions/scoring-rules`);
   }
 
   // Admin

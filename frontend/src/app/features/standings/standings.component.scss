@@ -128,6 +128,135 @@
   50%       { opacity: 0.3; }
 }
 
+// ── Live badge for series cards ─────────────────────────────────────────────
+// (Kept minimal — inline live indicator on score block is preferred)
+.live-indicator {
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #fff;
+  background: #ef4444;
+  padding: 2px 6px 2px 5px;
+  border-radius: 4px;
+  margin-top: 4px;
+  white-space: nowrap;
+  animation: live-ind-pulse 1.8s ease-in-out infinite;
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #fff;
+    margin-right: 3px;
+    vertical-align: middle;
+    animation: live-ind-dot 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes live-ind-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50%       { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0); }
+}
+
+@keyframes live-ind-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+// ── Pick-result strip (compact, shown below score on finished series) ─────────
+.pick-result-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+}
+
+.strip-entry {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 7px 3px 4px;
+  border-radius: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  transition: border-color 0.15s;
+
+  &.strip-correct {
+    border-color: rgba(74, 222, 128, 0.35);
+    background: rgba(74, 222, 128, 0.06);
+  }
+
+  &.strip-wrong {
+    border-color: rgba(239, 68, 68, 0.25);
+    background: rgba(239, 68, 68, 0.04);
+  }
+
+  &.strip-no-pick {
+    opacity: 0.45;
+  }
+}
+
+.mark-correct {
+  font-size: 11px;
+  font-weight: 800;
+  color: #4ade80;
+  line-height: 1;
+}
+
+.mark-wrong {
+  font-size: 11px;
+  font-weight: 800;
+  color: #ef4444;
+  line-height: 1;
+}
+
+.strip-games {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 1px;
+
+  &.strip-games-exact {
+    color: #fbbf24;
+    font-weight: 800;
+  }
+}
+
+.strip-no-pred {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.strip-pts {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 1px;
+  letter-spacing: 0.2px;
+
+  &.strip-pts-win {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.12);
+  }
+
+  &.strip-pts-bonus {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.15);
+  }
+
+  &.strip-pts-zero {
+    color: var(--text-muted);
+    background: transparent;
+    font-weight: 600;
+  }
+}
+
 .matchup {
   display: flex;
   align-items: center;
@@ -165,9 +294,15 @@
 
 .score-block {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
   flex-shrink: 0;
+
+  .score-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 }
 
 .score {

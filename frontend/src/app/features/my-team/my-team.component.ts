@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { LiveGameService } from '../../core/live-game.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -50,6 +51,7 @@ export class MyTeamComponent implements OnInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private route    = inject(ActivatedRoute);
   protected auth   = inject(AuthService);
+  protected liveGame = inject(LiveGameService);
 
   // ── Teams ─────────────────────────────────────────────────────────────────
   allTeams       = signal<any[]>([]);

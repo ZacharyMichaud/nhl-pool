@@ -4,11 +4,13 @@ import com.nhlpool.domain.DraftPick;
 import com.nhlpool.domain.Player;
 import com.nhlpool.repository.DraftPickRepository;
 import com.nhlpool.repository.PlayerRepository;
+import com.nhlpool.service.PlayoffSchedulerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/players")
@@ -17,6 +19,7 @@ public class PlayerController {
 
     private final PlayerRepository playerRepository;
     private final DraftPickRepository draftPickRepository;
+    private final PlayoffSchedulerService playoffSchedulerService;
 
     @GetMapping("/available")
     public ResponseEntity<List<Player>> getAvailablePlayers(
@@ -62,5 +65,14 @@ public class PlayerController {
                 ? draftPickRepository.findByTeamIdWithPlayerOrderByPickNumberAsc(teamId)
                 : draftPickRepository.findAllWithPlayerAndTeamOrderByPickNumber();
         return ResponseEntity.ok(picks);
+    }
+
+    /**
+     * Returns the set of NHL team abbreviations currently in a live playoff game.
+     * This endpoint is public (no auth required) to allow all clients to show live badges.
+     */
+    @GetMapping("/live-games")
+    public ResponseEntity<Set<String>> getLiveTeamAbbrevs() {
+        return ResponseEntity.ok(playoffSchedulerService.getLiveTeamAbbrevs());
     }
 }
