@@ -198,7 +198,6 @@ public class NhlApiService {
             for (Player player : draftedPlayers) {
                 JsonNode stats = boxscoreStats.get(player.getNhlPlayerId());
                 if (stats == null) {
-                    log.debug("[Boxscore] {} not in boxscore for game {} (not playing in this game)", player.getFullName(), gameId);
                     continue;
                 }
 
@@ -306,7 +305,6 @@ public class NhlApiService {
         }
 
         // 2. Game not in /schedule/now — fall back to gamecenter landing (handles finished games)
-        log.debug("[GameState] Game {} not found in /schedule/now — falling back to gamecenter landing", gameId);
         try {
             JsonNode landing = nhlApiClient.get()
                     .uri("/gamecenter/{gameId}/landing", gameId)
