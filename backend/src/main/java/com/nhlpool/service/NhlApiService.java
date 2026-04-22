@@ -28,6 +28,13 @@ public class NhlApiService {
     @Value("${app.nhl.season}")
     private String season;
 
+    @Value("${app.nhl.playoff-start-date:2025-04-19}")
+    private String playoffStartDateStr;
+
+    public java.time.LocalDate getPlayoffStartDate() {
+        return java.time.LocalDate.parse(playoffStartDateStr);
+    }
+
 
     /**
      * Fetches the playoff bracket/series carousel and returns the raw JSON
@@ -385,8 +392,90 @@ public class NhlApiService {
     }
 
     /**
-     * Get all team abbreviations that are in the playoffs based on the bracket data
+     * DTO for a single playoff game within a series, used by the game history endpoint.
      */
+    public record SeriesGameSummary(
+            int    gameNumber,
+            String awayAbbrev,
+            String homeAbbrev,
+            int    awayScore,
+            int    homeScore,
+            String gameState,     // PRE, LIVE, CRIT, OFF, FINAL
+            String periodType,    // REG, OT, SO
+            int    periodNumber,
+            String periodTimeRemaining, // e.g. "14:22" for live games
+            String gameDate       // ISO yyyy-MM-dd (ET)
+    ) {}
+
+    /**
+     * Fetches all games played (or scheduled) in a given playoff series by scanning
+     * the NHL /schedule/{date} endpoint across the full playoff window.
+     * Matches games by seriesStatus.seriesLetter (A–O etc.).
+     *
+     * @param seriesLetter the NHL series letter (e.g. "A", "B", "I")
+     * @param playoffStartDate the first date of playoffs to scan from (ET)
+     * @return list of games in chronological order
+     */
+    public List<SeriesGameSummary> getSeriesGameHistory(String seriesLetter, LocalDate playoffStartDate) {
+        ZoneId eastern = ZoneId.of("America/New_York");
+        LocalDate today = LocalDate.now(eastern).plusDays(1); // include today + 1 for scheduled games
+
+        List<SeriesGameSummary> games = new ArrayList<>();
+
+        for (LocalDate date = playoffStartDate; !date.isAfter(today); date = date.plusDays(1)) {
+            try {
+                JsonNode schedule = nhlApiClient.get()
+                        .uri("/schedule/{date}", date.toString())
+                        .retrieve()
+                        .bodyToMono(JsonNode.class)
+                        .block();
+
+                if (schedule == null || !schedule.has("gameWeek")) continue;
+
+                for (JsonNode dayNode : schedule.get("gameWeek")) {
+                    if (!date.toString().equals(dayNode.path("date").asText(""))) continue;
+                    for (JsonNode game : dayNode.path("games")) {
+                        if (game.path("gameType").asInt(0) != 3) continue; // playoffs only
+
+                        JsonNode ss = game.path("seriesStatus");
+                        if (ss.isMissingNode()) continue;
+                        if (!seriesLetter.equalsIgnoreCase(ss.path("seriesLetter").asText(""))) continue;
+
+                        int    gameNumber  = ss.path("gameNumberOfSeries").asInt(0);
+                        String awayAbbrev  = game.path("awayTeam").path("abbrev").asText("");
+                        String homeAbbrev  = game.path("homeTeam").path("abbrev").asText("");
+                        int    awayScore   = game.path("awayTeam").path("score").asInt(0);
+                        int    homeScore   = game.path("homeTeam").path("score").asInt(0);
+                        String state       = game.path("gameState").asText("PRE");
+
+                        JsonNode pd = game.path("periodDescriptor");
+                        int    periodNum   = pd.path("number").asInt(0);
+                        String periodType  = pd.path("periodType").asText("REG");
+
+                        // Live games include clock info
+                        String timeRemaining = "";
+                        if ("LIVE".equals(state) || "CRIT".equals(state)) {
+                            JsonNode clock = game.path("clock");
+                            timeRemaining = clock.path("timeRemaining").asText("");
+                        }
+
+                        games.add(new SeriesGameSummary(
+                                gameNumber, awayAbbrev, homeAbbrev,
+                                awayScore, homeScore, state,
+                                periodType, periodNum, timeRemaining,
+                                date.toString()
+                        ));
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[SeriesHistory] Failed to fetch schedule for {}: {}", date, e.getMessage());
+            }
+        }
+
+        games.sort(Comparator.comparingInt(SeriesGameSummary::gameNumber));
+        return games;
+    }
+
     public Set<String> getPlayoffTeamAbbrevs() {
         JsonNode bracket = getPlayoffBracket();
         Set<String> teams = new HashSet<>();

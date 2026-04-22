@@ -1,0 +1,128 @@
+<!-- ── Card row ──────────────────────────────────────────────────── -->
+<div
+  class="pc-row"
+  [class.eliminated]="eliminated"
+  [class.playing-live]="liveGame.isLive(player?.teamAbbrev)"
+  [class.pc-cs]="variant === 'cs'"
+  [class.has-player]="!!player"
+  (click)="openModal()">
+
+  <!-- Headshot / placeholder -->
+  <div class="pc-headshot-wrap">
+    <img
+      *ngIf="player?.headshotUrl"
+      [src]="player.headshotUrl"
+      class="pc-headshot"
+      loading="lazy"
+      onerror="this.style.display='none'">
+    <span *ngIf="!player?.headshotUrl" class="pc-headshot-fallback"></span>
+  </div>
+
+  <!-- Body: label + name + meta -->
+  <div class="pc-body">
+    <span *ngIf="label" class="pc-label">{{ label }}</span>
+    <div class="pc-name-row">
+      <span class="pc-name">{{ player?.fullName || player?.playerName || 'No pick yet' }}</span>
+      <span class="live-badge" *ngIf="liveGame.isLive(player?.teamAbbrev)">LIVE</span>
+      <span *ngIf="extraBadge" class="pc-extra-badge">{{ extraBadge }}</span>
+    </div>
+    <span class="pc-meta" *ngIf="player">
+      {{ formatPosition(player.position) }} · {{ player.teamAbbrev }}
+      <span *ngIf="eliminated" class="pc-elim-tag">ELIM</span>
+    </span>
+  </div>
+
+  <!-- Inline stats — right-aligned, same as player cards in My Team -->
+  <div class="pc-stats" *ngIf="player">
+    <div class="pc-stat">
+      <span class="val">{{ player.playoffGoals ?? player.goals ?? 0 }}</span>
+      <span class="lbl">G</span>
+    </div>
+    <div class="pc-stat">
+      <span class="val">{{ player.playoffAssists ?? player.assists ?? 0 }}</span>
+      <span class="lbl">A</span>
+    </div>
+    <div class="pc-stat">
+      <span class="val">{{ player.playoffGamesPlayed ?? player.gamesPlayed ?? 0 }}</span>
+      <span class="lbl">GP</span>
+    </div>
+    <div class="pc-stat highlight">
+      <span class="val">{{ player.playoffPoints ?? player.points ?? pts }}</span>
+      <span class="lbl">PTS</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bottom-sheet detail modal ──────────────────────────────────── -->
+<ng-container *ngIf="modalOpen && player">
+  <div class="pm-backdrop" (click)="closeModal()">
+    <div class="pm-sheet" (click)="$event.stopPropagation()">
+
+      <!-- drag handle -->
+      <div class="pm-handle"></div>
+
+      <!-- header -->
+      <div class="pm-header">
+        <img
+          *ngIf="player.headshotUrl"
+          [src]="player.headshotUrl"
+          class="pm-photo"
+          loading="lazy"
+          onerror="this.style.display='none'">
+        <div *ngIf="!player.headshotUrl" class="pm-photo-placeholder"></div>
+        <div class="pm-identity">
+          <div class="pm-name">
+            {{ player.fullName || player.playerName }}
+            <span *ngIf="label" class="pm-label-badge">{{ label }}</span>
+          </div>
+          <div class="pm-meta">
+            <span class="pm-pos">{{ formatPosition(player.position) }}</span>
+            <span class="pm-nhl-team">{{ player.teamAbbrev }}</span>
+            <span class="live-badge" *ngIf="liveGame.isLive(player.teamAbbrev)">LIVE</span>
+          </div>
+          <span *ngIf="eliminated" class="pm-elim-tag">ELIMINATED</span>
+        </div>
+      </div>
+
+      <div class="pm-divider"></div>
+
+      <div class="pm-stats-label">PLAYOFF STATS</div>
+      <div class="pm-stats-grid">
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ player.playoffGamesPlayed ?? player.gamesPlayed ?? 0 }}</div>
+          <div class="pm-stat-lbl">GP</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ player.playoffGoals ?? player.goals ?? 0 }}</div>
+          <div class="pm-stat-lbl">G</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ player.playoffAssists ?? player.assists ?? 0 }}</div>
+          <div class="pm-stat-lbl">A</div>
+        </div>
+        <div class="pm-stat pm-stat-featured">
+          <div class="pm-stat-val pm-stat-val-big">{{ player.playoffPoints ?? player.points ?? pts }}</div>
+          <div class="pm-stat-lbl">PTS</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ ppg }}</div>
+          <div class="pm-stat-lbl">PPG</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ ppp }}</div>
+          <div class="pm-stat-lbl">PPP</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ toi }}</div>
+          <div class="pm-stat-lbl">TOI/GP</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-val">{{ pgp }}</div>
+          <div class="pm-stat-lbl">P/GP</div>
+        </div>
+      </div>
+
+      <button class="pm-close-btn" (click)="closeModal()">Close</button>
+    </div>
+  </div>
+</ng-container>

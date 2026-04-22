@@ -1,35 +1,163 @@
-// ── Team Selector ─────────────────────────────────────────────────────────────
-.team-select-row {
-  margin-bottom: 16px;
-}
-
-// ── Team Summary ──────────────────────────────────────────────────────────────
-.team-summary { margin-bottom: 16px; @media (min-width: 768px) { margin-bottom: 20px; } }
-
-.summary-header {
+// ── Teams Accordion ───────────────────────────────────────────────────────────
+.teams-accordion {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.team-accordion-card {
+  padding: 0;
+  overflow: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s;
+
+  &.is-open {
+    border-color: rgba(0, 195, 255, 0.3);
+    box-shadow: 0 0 0 1px rgba(0, 195, 255, 0.12), 0 4px 20px rgba(0,0,0,0.25);
+  }
+
+  &.is-my-team:not(.is-open) {
+    border-color: rgba(0, 195, 255, 0.18);
+  }
+}
+
+// ── Accordion Header ──────────────────────────────────────────────────────────
+.accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
   gap: 12px;
-  margin-bottom: 16px;
+
+  &:hover { background: rgba(255,255,255,0.03); }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
 }
 
-.summary-title {
-  h2 { margin: 0 0 4px; font-size: 17px; font-weight: 800; @media (min-width: 768px) { font-size: 20px; } }
+.accordion-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
 }
 
-.members-pill {
-  display: inline-block;
+.accordion-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.rank-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
   font-size: 12px;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  padding: 3px 10px;
-  border-radius: 20px;
+  font-weight: 800;
+  flex-shrink: 0;
+
+  &.rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; }
+  &.rank-2 { background: linear-gradient(135deg, #C0C0C0, #A8A8A8); color: #000; }
+  &.rank-3 { background: linear-gradient(135deg, #CD7F32, #A0522D); color: #fff; }
+  &.rank-other { background: var(--bg-secondary); color: var(--text-secondary); }
 }
 
+.accordion-name-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.accordion-team-name {
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+
+  @media (min-width: 480px) { font-size: 15px; }
+}
+
+.accordion-members {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.you-pill {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #000;
+  background: var(--accent);
+  padding: 2px 7px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.header-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+
+  .h-val {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--accent);
+  }
+
+  .h-lbl {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+}
+
+.chevron {
+  font-size: 20px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  transform: rotate(0deg);
+  line-height: 1;
+
+  &.open { transform: rotate(90deg); }
+}
+
+// ── Accordion Body ────────────────────────────────────────────────────────────
+.accordion-body {
+  padding: 0 16px 16px;
+  animation: accordion-open 0.2s ease-out;
+
+  @media (min-width: 768px) { padding: 0 20px 20px; }
+}
+
+@keyframes accordion-open {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ── Team Summary (inside accordion body) ─────────────────────────────────────
 .summary-row {
   display: flex;
   gap: 8px;
   justify-content: space-around;
+  padding: 12px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
 
   @media (min-width: 480px) { gap: 24px; justify-content: flex-start; }
   @media (min-width: 768px) { gap: 32px; }
@@ -64,116 +192,20 @@
   @media (min-width: 768px) { gap: 12px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 }
 
-.player-card {
+.empty { color: var(--text-muted); text-align: center; padding: 24px; }
+
+// ── Unlocked CS search card (own-team, editable) ──────────────────────────────
+.cs-player-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   padding: 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(255, 200, 50, 0.04) 100%);
+  border: 1px solid rgba(255, 200, 50, 0.25);
   border-radius: var(--radius);
   transition: all 0.2s;
 
-  @media (min-width: 768px) { padding: 16px; gap: 12px; }
-
-  &:hover { border-color: rgba(0,195,255,0.15); }
-
-  // Eliminated: dimmed out, no text-decoration (that lives on class .eliminated in global styles)
-  &.eliminated {
-    opacity: 0.4;
-    filter: grayscale(50%);
-  }
-}
-
-.pc-headshot {
-  width: 44px; height: 44px; border-radius: 50%;
-  object-fit: cover; background: var(--bg-secondary); flex-shrink: 0;
-
-  @media (min-width: 768px) { width: 48px; height: 48px; }
-}
-
-.pc-body { flex: 1; min-width: 0; }
-
-.pc-name {
-  font-weight: 700; font-size: 13px; display: block;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  @media (min-width: 768px) { font-size: 14px; }
-}
-
-.pc-meta { color: var(--text-secondary); font-size: 11px; margin-top: 1px; display: block; }
-
-.pc-elim {
-  display: inline-block; font-size: 9px; font-weight: 700;
-  color: var(--danger); background: rgba(239,68,68,0.15);
-  padding: 2px 5px; border-radius: 4px; margin-top: 3px;
-}
-
-.pc-stats { display: flex; gap: 10px; flex-shrink: 0; }
-
-.pc-stat {
-  text-align: center;
-  .val { display: block; font-weight: 700; font-size: 14px; @media (min-width: 768px) { font-size: 16px; } }
-  .lbl { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
-}
-
-.pc-stat.highlight .val { color: var(--accent); }
-
-.empty { color: var(--text-muted); text-align: center; padding: 24px; }
-
-// ── Live badge & card highlight ───────────────────────────────────────────────
-.live-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.6px;
-  color: #fff;
-  background: #ef4444;
-  padding: 1px 5px 1px 4px;
-  border-radius: 5px;
-  vertical-align: middle;
-  margin-left: 5px;
-  line-height: 1.4;
-  white-space: nowrap;
-  animation: live-pulse-mt 1.8s ease-in-out infinite;
-
-  &::before {
-    content: '';
-    display: inline-block;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: #fff;
-    animation: live-dot-blink-mt 1.2s ease-in-out infinite;
-  }
-}
-
-.playing-live {
-  border-color: rgba(239, 68, 68, 0.3) !important;
-  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15);
-}
-
-@keyframes live-pulse-mt {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-  50%       { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
-}
-
-@keyframes live-dot-blink-mt {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.3; }
-}
-
-
-// ── Conn Smythe (embedded player card) ───────────────────────────────────────
-.cs-player-card {
-  border-color: rgba(255, 200, 50, 0.25);
-  background: linear-gradient(
-    135deg,
-    var(--bg-card) 0%,
-    rgba(255, 200, 50, 0.04) 100%
-  );
-
+  @media (min-width: 768px) { padding: 14px 16px; gap: 12px; }
   &:hover { border-color: rgba(255, 200, 50, 0.45); }
 }
 
@@ -182,14 +214,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 44px; height: 44px;
+  @media (min-width: 768px) { width: 48px; height: 48px; }
+}
+
+.pc-headshot {
+  width: 44px; height: 44px; border-radius: 50%;
+  object-fit: cover; background: var(--bg-secondary); flex-shrink: 0;
   @media (min-width: 768px) { width: 48px; height: 48px; }
 }
 
 .cs-pc-trophy { font-size: 26px; line-height: 1; }
 
-.cs-pc-body { gap: 4px; display: flex; flex-direction: column; }
+.cs-pc-body { flex: 1; min-width: 0; gap: 4px; display: flex; flex-direction: column; }
 
 .cs-pc-title-row {
   display: flex;
@@ -197,6 +234,9 @@
   gap: 6px;
   flex-wrap: wrap;
 }
+
+.pc-name { font-weight: 700; font-size: 13px; display: block; @media (min-width: 768px) { font-size: 14px; } }
+.pc-meta { color: var(--text-secondary); font-size: 11px; margin-top: 1px; display: block; }
 
 .cs-pc-badge {
   font-size: 9px;
@@ -208,33 +248,6 @@
   padding: 2px 6px;
   border-radius: 8px;
   flex-shrink: 0;
-}
-
-.cs-no-pick-text { font-style: italic; color: var(--text-muted); }
-
-// ── legacy CS header/title (no longer rendered, kept for safety) ──────────────
-.cs-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.cs-trophy { font-size: 22px; flex-shrink: 0; }
-.cs-title-block { display: flex; flex-direction: column; }
-
-.cs-title {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: 0.2px;
-}
-
-.cs-subtitle {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .cs-search-wrap {

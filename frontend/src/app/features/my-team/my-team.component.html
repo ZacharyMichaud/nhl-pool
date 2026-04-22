@@ -1,132 +1,156 @@
 <div class="page-container">
 
-  <!-- Team Selector -->
-  <div class="team-select-row" *ngIf="allTeams().length > 0">
-    <app-dropdown
-      [options]="teamOptions()"
-      [value]="selectedTeamId()"
-      (valueChange)="selectTeam($event)">
-    </app-dropdown>
-  </div>
-
-  <!-- Selected team view -->
-  <ng-container *ngIf="selectedTeam(); else noTeams">
-
-    <!-- Team Summary -->
-    <div class="team-summary card">
-      <div class="summary-header">
-        <div class="summary-title">
-          <h2>{{ selectedTeam()?.teamName }}</h2>
-          <span class="members-pill">{{ selectedTeam()?.memberNames?.join(' & ') }}</span>
-        </div>
-      </div>
-      <div class="summary-row">
-        <div class="summary-item">
-          <span class="s-val">{{ selectedTeam()?.totalPoints }}</span>
-          <span class="s-label">Total Pts</span>
-        </div>
-        <div class="summary-item">
-          <span class="s-val">{{ selectedTeam()?.playerPoints }}</span>
-          <span class="s-label">Player Pts</span>
-        </div>
-        <div class="summary-item">
-          <span class="s-val">{{ selectedTeam()?.predictionPoints }}</span>
-          <span class="s-label">Prediction Pts</span>
-        </div>
-        <div class="summary-item">
-          <span class="s-val">{{ selectedTeam()?.activePlayers }}</span>
-          <span class="s-label">Active</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Roster + Conn Smythe -->
-    <div class="roster-grid">
-      <div
-        *ngFor="let ps of selectedTeam()?.playerScores || []"
-        class="player-card"
-        [class.eliminated]="ps.eliminated"
-        [class.playing-live]="liveGame.isLive(ps.teamAbbrev)">
-        <img [src]="ps.headshotUrl" class="pc-headshot" loading="lazy" onerror="this.style.display='none'">
-        <div class="pc-body">
-          <span class="pc-name">
-            {{ ps.playerName }}
-            <span class="live-badge" *ngIf="liveGame.isLive(ps.teamAbbrev)">LIVE</span>
-          </span>
-          <span class="pc-meta">{{ ps.position }} · {{ ps.teamAbbrev }}</span>
-          <span *ngIf="ps.eliminated" class="pc-elim">ELIMINATED</span>
-        </div>
-        <div class="pc-stats">
-          <div class="pc-stat"><span class="val">{{ ps.goals }}</span><span class="lbl">G</span></div>
-          <div class="pc-stat"><span class="val">{{ ps.assists }}</span><span class="lbl">A</span></div>
-          <div class="pc-stat"><span class="val">{{ ps.gamesPlayed }}</span><span class="lbl">GP</span></div>
-          <div class="pc-stat highlight"><span class="val">{{ ps.points }}</span><span class="lbl">PTS</span></div>
-        </div>
-      </div>
-
-      <!-- Conn Smythe Card -->
-      <div class="player-card cs-player-card">
-        <div class="cs-pc-headshot-wrap">
-          <img
-            *ngIf="selectedTeam()?.connSmytheHeadshotUrl"
-            [src]="selectedTeam()?.connSmytheHeadshotUrl"
-            class="pc-headshot"
-            loading="lazy"
-            onerror="this.style.display='none'">
-          <span *ngIf="!selectedTeam()?.connSmytheHeadshotUrl" class="cs-pc-trophy">🏆</span>
-        </div>
-
-        <div class="pc-body cs-pc-body">
-          <div class="cs-pc-title-row">
-            <span class="pc-name">Conn Smythe</span>
-            <span class="cs-pc-badge">MVP Pick</span>
-          </div>
-
-          <!-- Own team: editable search -->
-          <ng-container *ngIf="isMyTeam(selectedTeam()?.teamId)">
-            <div class="cs-search-wrap">
-              <div class="cs-input-row">
-                <input
-                  class="cs-input"
-                  type="text"
-                  placeholder="Search player…"
-                  [value]="csSearch()"
-                  (input)="onCsSearchInput($any($event.target).value)"
-                  (blur)="closeCsDropdown()"
-                  autocomplete="off"
-                />
-                <span class="cs-saving" *ngIf="csSaving()">⏳</span>
-              </div>
-              <div class="cs-results" *ngIf="csShowDropdown() && csResults().length > 0">
-                <div
-                  *ngFor="let p of csResults()"
-                  class="cs-result-row"
-                  (mousedown)="pickCsPlayer(p)">
-                  <img [src]="p.headshotUrl" class="cs-result-headshot" onerror="this.style.display='none'">
-                  <div class="cs-result-info">
-                    <span class="cs-result-name">{{ p.fullName }}</span>
-                    <span class="cs-result-meta">{{ p.position }} · {{ p.teamAbbrev }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <span class="pc-meta" *ngIf="!selectedTeam()?.connSmythePlayerName">No pick yet</span>
-          </ng-container>
-
-          <!-- Other teams: read-only -->
-          <ng-container *ngIf="!isMyTeam(selectedTeam()?.teamId)">
-            <span class="pc-meta" *ngIf="selectedTeam()?.connSmythePlayerName">{{ selectedTeam()?.connSmythePlayerName }}</span>
-            <span class="pc-meta cs-no-pick-text" *ngIf="!selectedTeam()?.connSmythePlayerName">No pick yet</span>
-          </ng-container>
-        </div>
-      </div>
-    </div>
-
-  </ng-container>
-
-  <ng-template #noTeams>
+  <!-- No teams state -->
+  <ng-container *ngIf="allTeams().length === 0; else teamsList">
     <div class="card">
       <p class="empty">No teams have been set up yet. Ask the admin to get started!</p>
     </div>
+  </ng-container>
+
+  <ng-template #teamsList>
+
+    <!-- ── Team accordion cards ─────────────────────────────────────────── -->
+    <div class="teams-accordion">
+      <div
+        *ngFor="let team of allTeams(); let i = index"
+        class="team-accordion-card card"
+        [class.is-open]="selectedTeamId() === team.teamId"
+        [class.is-my-team]="isMyTeam(team.teamId)">
+
+        <!-- ── Card header (always visible, click to expand) ────────────── -->
+        <div
+          class="accordion-header"
+          (click)="toggleTeam(team.teamId)"
+          tabindex="0"
+          (keydown.enter)="toggleTeam(team.teamId)"
+          (keydown.space)="$event.preventDefault(); toggleTeam(team.teamId)"
+          [attr.aria-expanded]="selectedTeamId() === team.teamId">
+
+          <div class="accordion-left">
+            <span class="rank-chip" [ngClass]="'rank-' + (i < 3 ? (i + 1) : 'other')">{{ i + 1 }}</span>
+            <div class="accordion-name-block">
+              <span class="accordion-team-name">{{ team.teamName }}</span>
+              <span class="accordion-members">{{ team.memberNames?.join(' & ') }}</span>
+            </div>
+            <span class="you-pill" *ngIf="isMyTeam(team.teamId)">You</span>
+          </div>
+
+          <div class="accordion-right">
+            <div class="header-stat">
+              <span class="h-val">{{ team.totalPoints }}</span>
+              <span class="h-lbl">pts</span>
+            </div>
+            <span class="chevron" [class.open]="selectedTeamId() === team.teamId">›</span>
+          </div>
+        </div>
+
+        <!-- ── Expanded body ──────────────────────────────────────────────── -->
+        <div class="accordion-body" *ngIf="selectedTeamId() === team.teamId">
+
+          <!-- Stat row -->
+          <div class="summary-row">
+            <div class="summary-item">
+              <span class="s-val">{{ team.totalPoints }}</span>
+              <span class="s-label">Total Pts</span>
+            </div>
+            <div class="summary-item">
+              <span class="s-val">{{ team.playerPoints }}</span>
+              <span class="s-label">Player Pts</span>
+            </div>
+            <div class="summary-item">
+              <span class="s-val">{{ team.predictionPoints }}</span>
+              <span class="s-label">Prediction Pts</span>
+            </div>
+            <div class="summary-item">
+              <span class="s-val">{{ team.activePlayers }}</span>
+              <span class="s-label">Active</span>
+            </div>
+          </div>
+
+          <!-- ── Roster grid ─────────────────────────────────────────────── -->
+          <div class="roster-grid">
+
+            <!-- Roster player cards -->
+            <app-player-card
+              *ngFor="let ps of team.playerScores || []"
+              [player]="ps"
+              [eliminated]="ps.eliminated">
+            </app-player-card>
+
+            <!-- Conn Smythe card -->
+            <ng-container *ngIf="connSmytheLocked(); else csUnlocked">
+              <!-- Locked: display mode using shared card (cs variant) -->
+              <app-player-card
+                [player]="team.connSmythePlayerName ? csPlayerFrom(team) : null"
+                label="Conn Smythe"
+                variant="cs">
+              </app-player-card>
+            </ng-container>
+
+            <!-- Unlocked: own team gets search, others get read-only display -->
+            <ng-template #csUnlocked>
+              <!-- Own team: editable search -->
+              <ng-container *ngIf="isMyTeam(team.teamId)">
+                <div class="player-card cs-player-card">
+                  <div class="cs-pc-headshot-wrap">
+                    <img
+                      *ngIf="team.connSmytheHeadshotUrl"
+                      [src]="team.connSmytheHeadshotUrl"
+                      class="pc-headshot"
+                      loading="lazy"
+                      onerror="this.style.display='none'">
+                  <span *ngIf="!team.connSmytheHeadshotUrl" class="cs-pc-trophy"></span>
+                  </div>
+                  <div class="pc-body cs-pc-body">
+                    <div class="cs-pc-title-row">
+                      <span class="pc-name">Conn Smythe</span>
+                      <span class="cs-pc-badge">MVP Pick</span>
+                    </div>
+                    <div class="cs-search-wrap">
+                      <div class="cs-input-row">
+                        <input
+                          class="cs-input"
+                          type="text"
+                          placeholder="Search player…"
+                          [value]="csSearch()"
+                          (input)="onCsSearchInput($any($event.target).value)"
+                          (blur)="closeCsDropdown()"
+                          autocomplete="off"
+                        />
+                        <span class="cs-saving" *ngIf="csSaving()">⏳</span>
+                      </div>
+                      <div class="cs-results" *ngIf="csShowDropdown() && csResults().length > 0">
+                        <div
+                          *ngFor="let p of csResults()"
+                          class="cs-result-row"
+                          (mousedown)="pickCsPlayer(p)">
+                          <img [src]="p.headshotUrl" class="cs-result-headshot" onerror="this.style.display='none'">
+                          <div class="cs-result-info">
+                            <span class="cs-result-name">{{ p.fullName }}</span>
+                            <span class="cs-result-meta">{{ p.position }} · {{ p.teamAbbrev }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <span class="pc-meta" *ngIf="!team.connSmythePlayerName">No pick yet</span>
+                  </div>
+                </div>
+              </ng-container>
+
+              <!-- Other teams: read-only display (cs variant, no edit) -->
+              <ng-container *ngIf="!isMyTeam(team.teamId)">
+                <app-player-card
+                  [player]="team.connSmythePlayerName ? csPlayerFrom(team) : null"
+                  label="Conn Smythe"
+                  variant="cs">
+                </app-player-card>
+              </ng-container>
+            </ng-template>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
   </ng-template>
 </div>

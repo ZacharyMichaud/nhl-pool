@@ -29,6 +29,7 @@ app:
   nhl:
     base-url: https://api-web.nhle.com/v1
     season: 20252026
+    playoff-start-date: 2026-04-18
 
 logging:
   level:

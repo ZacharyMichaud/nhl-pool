@@ -1,7 +1,10 @@
 package com.nhlpool.controller;
 
+import com.nhlpool.domain.Player;
 import com.nhlpool.domain.PoolTeam;
 import com.nhlpool.domain.User;
+import com.nhlpool.repository.DraftPickRepository;
+import com.nhlpool.repository.PlayerRepository;
 import com.nhlpool.repository.PoolTeamRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +21,8 @@ public class TeamController {
 
     private final PoolTeamRepository poolTeamRepository;
     private final com.nhlpool.repository.DraftConfigRepository draftConfigRepository;
+    private final PlayerRepository playerRepository;
+    private final DraftPickRepository draftPickRepository;
 
     @GetMapping
     public ResponseEntity<List<PoolTeam>> getTeams() {
@@ -46,7 +51,32 @@ public class TeamController {
         });
         PoolTeam team = poolTeamRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Team not found"));
-        team.setConnSmythePredictionPlayerId(body.get("playerId"));
+
+        Long newPlayerId = body.get("playerId");
+        Long oldPlayerId = team.getConnSmythePredictionPlayerId();
+
+        // ── Unmark old CS pick as drafted (only if not a roster pick) ──────────
+        if (oldPlayerId != null && !oldPlayerId.equals(newPlayerId)) {
+            playerRepository.findById(oldPlayerId).ifPresent(oldPlayer -> {
+                boolean stillOnRoster = draftPickRepository.existsByPlayerId(oldPlayerId);
+                if (!stillOnRoster) {
+                    oldPlayer.setDrafted(false);
+                    playerRepository.save(oldPlayer);
+                }
+            });
+        }
+
+        // ── Mark new CS pick as drafted so live sync picks them up ─────────────
+        if (newPlayerId != null) {
+            playerRepository.findById(newPlayerId).ifPresent(newPlayer -> {
+                if (!newPlayer.getDrafted()) {
+                    newPlayer.setDrafted(true);
+                    playerRepository.save(newPlayer);
+                }
+            });
+        }
+
+        team.setConnSmythePredictionPlayerId(newPlayerId);
         return ResponseEntity.ok(poolTeamRepository.save(team));
     }
 }

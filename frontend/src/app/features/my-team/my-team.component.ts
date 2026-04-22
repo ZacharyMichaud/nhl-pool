@@ -6,8 +6,8 @@ import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { LiveGameService } from '../../core/live-game.service';
-import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
-import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
+import { PlayerCardComponent } from '../../shared/components/player-card/player-card.component';
+
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 /** Primary colors for each NHL team, keyed by 3-letter abbreviation. */
@@ -41,7 +41,7 @@ const POOL_TEAM_PALETTE = [
 @Component({
   selector: 'app-my-team',
   standalone: true,
-  imports: [CommonModule, FormsModule, DropdownComponent, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatSnackBarModule, PlayerCardComponent],
   templateUrl: './my-team.component.html',
   styleUrl: './my-team.component.scss',
 })
@@ -57,7 +57,11 @@ export class MyTeamComponent implements OnInit, OnDestroy {
   allTeams       = signal<any[]>([]);
   selectedTeamId = signal<number | null>(null);
 
-  // ── Conn Smythe search ────────────────────────────────────────────────────
+  // ── Draft config (for CS lock state) ──────────────────────────────────────
+  draftConfig = signal<any>(null);
+  connSmytheLocked = computed(() => !!this.draftConfig()?.connSmytheLocked);
+
+  // ── Conn Smythe search (only shown when unlocked on own team) ─────────────
   csSearch       = signal('');
   csResults      = signal<any[]>([]);
   csSaving       = signal(false);
@@ -66,20 +70,10 @@ export class MyTeamComponent implements OnInit, OnDestroy {
   private searchSubject = new Subject<string>();
 
   // ── Computed ──────────────────────────────────────────────────────────────
-  teamOptions = computed<DropdownOption[]>(() =>
-    this.allTeams().map(t => ({
-      value:    t.teamId,
-      label:    t.teamName,
-      sublabel: `${t.totalPoints} pts`,
-      badge:    this.auth.teamId() === t.teamId ? 'You' : undefined,
-    }))
-  );
-
   selectedTeam = computed(() =>
     this.allTeams().find((t: any) => t.teamId === this.selectedTeamId()) ?? null
   );
 
-  /** Maps teamId → palette color, stable across renders. */
   teamColorMap = computed<Record<number, string>>(() => {
     const map: Record<number, string> = {};
     this.allTeams().forEach((t: any, i: number) => {
@@ -94,9 +88,9 @@ export class MyTeamComponent implements OnInit, OnDestroy {
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   ngOnInit() {
-    // Read optional teamId query param (e.g. navigated from Standings)
     const paramTeamId = this.route.snapshot.queryParamMap.get('teamId');
     this.loadTeams(paramTeamId ? Number(paramTeamId) : null);
+    this.loadDraftConfig();
 
     this.searchSubject.pipe(
       debounceTime(300),
@@ -111,11 +105,14 @@ export class MyTeamComponent implements OnInit, OnDestroy {
   ngOnDestroy() {}
 
   // ── Data loading ──────────────────────────────────────────────────────────
+  loadDraftConfig() {
+    this.api.getDraftConfig().subscribe({ next: cfg => this.draftConfig.set(cfg), error: () => {} });
+  }
+
   loadTeams(preselectedTeamId: number | null = null) {
     this.api.getStandings().subscribe(standings => {
       this.allTeams.set(standings);
       const myId = this.auth.teamId();
-      // Priority: query-param team → my team → first team
       const target =
         (preselectedTeamId != null && standings.find((s: any) => s.teamId === preselectedTeamId))
           ? preselectedTeamId
@@ -130,15 +127,23 @@ export class MyTeamComponent implements OnInit, OnDestroy {
     });
   }
 
-  selectTeam(teamId: number) {
-    this.selectedTeamId.set(Number(teamId));
+  /** Toggle the accordion for a given team. */
+  toggleTeam(teamId: number) {
+    const id = Number(teamId);
+    if (this.selectedTeamId() === id) {
+      this.selectedTeamId.set(null);
+    } else {
+      this.selectedTeamId.set(id);
+      const team = this.allTeams().find((t: any) => t.teamId === id);
+      this.csSearch.set(team?.connSmythePlayerName ?? '');
+    }
   }
 
   isMyTeam(teamId: number): boolean {
     return this.auth.teamId() === teamId;
   }
 
-  // ── NHL team color helpers (kept for template use) ────────────────────────
+  // ── NHL team color helpers ────────────────────────────────────────────────
   getTeamColor(abbrev: string): string {
     return NHL_TEAM_COLORS[abbrev?.toUpperCase()]?.bg ?? '#1e2530';
   }
@@ -147,7 +152,28 @@ export class MyTeamComponent implements OnInit, OnDestroy {
     return NHL_TEAM_COLORS[abbrev?.toUpperCase()]?.light ? '#ffffff' : '#000000';
   }
 
-  // ── Conn Smythe ───────────────────────────────────────────────────────────
+  // ── CS player shape adapter ───────────────────────────────────────────────
+  /**
+   * Builds a player-shaped object from the TeamStanding CS fields so the
+   * shared PlayerCardComponent can display Conn Smythe picks uniformly.
+   */
+  csPlayerFrom(team: any): any {
+    return {
+      fullName:                 team.connSmythePlayerName,
+      headshotUrl:              team.connSmytheHeadshotUrl,
+      position:                 team.connSmythePosition,
+      teamAbbrev:               team.connSmytheTeamAbbrev,
+      playoffGoals:             team.connSmytheGoals,
+      playoffAssists:           team.connSmytheAssists,
+      playoffGamesPlayed:       team.connSmytheGamesPlayed,
+      playoffPoints:            team.connSmythePoints,
+      playoffPowerPlayGoals:    team.connSmythePowerPlayGoals,
+      playoffPowerPlayPoints:   team.connSmythePowerPlayPoints,
+      playoffAvgToi:            team.connSmytheAvgToi,
+    };
+  }
+
+  // ── Conn Smythe search ────────────────────────────────────────────────────
   onCsSearchInput(value: string) {
     this.csSearch.set(value);
     if (value.trim().length < 2) {

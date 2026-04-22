@@ -202,13 +202,28 @@ public class DraftService {
 
     @Transactional
     public DraftConfig resetDraft() {
-        // Delete all picks and unmark players
+        // Delete all picks and unmark roster-drafted players
         List<DraftPick> picks = draftPickRepository.findAll();
         picks.forEach(pick -> {
             pick.getPlayer().setDrafted(false);
             playerRepository.save(pick.getPlayer());
         });
         draftPickRepository.deleteAll();
+
+        // Also clear any players marked drafted solely via a Conn Smythe pick
+        // (they have no DraftPick row, so the loop above misses them)
+        List<PoolTeam> teams = poolTeamRepository.findAll();
+        teams.forEach(team -> {
+            Long csId = team.getConnSmythePredictionPlayerId();
+            if (csId != null) {
+                playerRepository.findById(csId).ifPresent(p -> {
+                    p.setDrafted(false);
+                    playerRepository.save(p);
+                });
+                team.setConnSmythePredictionPlayerId(null);
+                poolTeamRepository.save(team);
+            }
+        });
 
         DraftConfig config = getConfig();
         config.setStatus(DraftStatus.NOT_STARTED);

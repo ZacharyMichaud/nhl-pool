@@ -26,7 +26,9 @@ public class ScoringService {
             int activePlayers, int eliminatedPlayers,
             List<PlayerScore> playerScores,
             Long connSmythePredictionPlayerId, String connSmythePlayerName,
-            String connSmytheHeadshotUrl) {}
+            String connSmytheHeadshotUrl, String connSmythePosition, String connSmytheTeamAbbrev,
+            int connSmytheGoals, int connSmytheAssists, int connSmytheGamesPlayed, int connSmythePoints,
+            int connSmythePowerPlayGoals, int connSmythePowerPlayPoints, String connSmytheAvgToi) {}
 
     public record PlayerScore(
             Long playerId, String playerName, String position, String teamAbbrev,
@@ -64,18 +66,32 @@ public class ScoringService {
             Long csPlayerId = team.getConnSmythePredictionPlayerId();
             String csPlayerName = null;
             String csHeadshotUrl = null;
+            String csPosition = null;
+            String csTeamAbbrev = null;
+            int csGoals = 0, csAssists = 0, csGp = 0, csPts = 0, csPpg = 0, csPpp = 0;
+            String csToi = null;
             if (csPlayerId != null) {
                 var csPlayer = playerRepository.findById(csPlayerId).orElse(null);
                 if (csPlayer != null) {
                     csPlayerName = csPlayer.getFullName();
                     csHeadshotUrl = csPlayer.getHeadshotUrl();
+                    csPosition    = csPlayer.getPosition();
+                    csTeamAbbrev  = csPlayer.getTeamAbbrev();
+                    csGoals       = csPlayer.getPlayoffGoals() != null ? csPlayer.getPlayoffGoals() : 0;
+                    csAssists     = csPlayer.getPlayoffAssists() != null ? csPlayer.getPlayoffAssists() : 0;
+                    csGp          = csPlayer.getPlayoffGamesPlayed() != null ? csPlayer.getPlayoffGamesPlayed() : 0;
+                    csPts         = csGoals + csAssists;
+                    csPpg         = csPlayer.getPlayoffPowerPlayGoals() != null ? csPlayer.getPlayoffPowerPlayGoals() : 0;
+                    csPpp         = csPlayer.getPlayoffPowerPlayPoints() != null ? csPlayer.getPlayoffPowerPlayPoints() : 0;
+                    csToi         = csPlayer.getPlayoffAvgToi();
                 }
             }
 
             return new TeamStanding(team.getId(), team.getName(), memberNames,
                     playerPoints, predictionPoints, playerPoints + predictionPoints,
                     activePlayers, eliminatedPlayers, playerScores,
-                    csPlayerId, csPlayerName, csHeadshotUrl);
+                    csPlayerId, csPlayerName, csHeadshotUrl, csPosition, csTeamAbbrev,
+                    csGoals, csAssists, csGp, csPts, csPpg, csPpp, csToi);
         }).sorted(Comparator.comparingInt(TeamStanding::totalPoints).reversed())
           .collect(Collectors.toList());
     }

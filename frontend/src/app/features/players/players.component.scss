@@ -22,7 +22,8 @@
   padding: 1px 5px 1px 4px;
   border-radius: 5px;
   vertical-align: middle;
-  margin-left: 5px;
+  margin-left: 0;
+  flex-shrink: 0;
   line-height: 1.4;
   white-space: nowrap;
   animation: live-pulse 1.8s ease-in-out infinite;
@@ -144,6 +145,14 @@
 }
 
 .p-info { display: flex; flex-direction: column; }
+
+// Name + live badge in one flex row so the badge never wraps separately
+.p-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0; // allow the name to truncate
+}
 
 .p-name {
   font-weight: 700;

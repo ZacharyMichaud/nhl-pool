@@ -1,11 +1,12 @@
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { CommonModule, DecimalPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ApiService } from '../../core/api.service';
 import { DraftEventService } from '../../core/draft-event.service';
 import { LiveGameService } from '../../core/live-game.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
 import { PoolBadgeComponent } from '../../shared/components/pool-badge/pool-badge.component';
+import { PlayerCardComponent } from '../../shared/components/player-card/player-card.component';
 import { forkJoin, Subscription } from 'rxjs';
 
 type SortCol = 'pts' | 'g' | 'a' | 'gp' | 'ppg' | 'ppp' | 'toi';
@@ -13,7 +14,7 @@ type SortCol = 'pts' | 'g' | 'a' | 'gp' | 'ppg' | 'ppp' | 'toi';
 @Component({
   selector: 'app-players',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, DropdownComponent, PoolBadgeComponent],
+  imports: [CommonModule, DropdownComponent, PoolBadgeComponent, PlayerCardComponent],
   templateUrl: './players.component.html',
   styleUrl: './players.component.scss',
 })
@@ -114,7 +115,6 @@ export class PlayersComponent implements OnInit, OnDestroy {
   // ── Modal ──
 
   openModal(pick: any) {
-    if (window.innerWidth >= 600) return; // desktop: no modal
     this.selectedPick.set(pick);
   }
 

@@ -10,6 +10,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import com.nhlpool.service.NhlApiService;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,6 +28,7 @@ public class PredictionController {
     private final UserRepository userRepository;
     private final com.nhlpool.repository.DraftConfigRepository draftConfigRepository;
     private final com.nhlpool.repository.PredictionScoringRuleRepository predictionScoringRuleRepository;
+    private final NhlApiService nhlApiService;
 
     @GetMapping("/round/{roundNumber}")
     @Transactional(readOnly = true)
@@ -109,6 +112,21 @@ public class PredictionController {
     @GetMapping("/scoring-rules")
     public ResponseEntity<List<PredictionScoringRule>> getPredictionScoringRules() {
         return ResponseEntity.ok(predictionScoringRuleRepository.findAll());
+    }
+
+    /**
+     * Returns game-by-game history for a given series, fetched live from the NHL API.
+     * Games are ordered chronologically. Live games include period and time info.
+     */
+    @GetMapping("/series/{seriesId}/games")
+    public ResponseEntity<List<NhlApiService.SeriesGameSummary>> getSeriesGames(
+            @PathVariable Long seriesId) {
+        return seriesRepository.findByIdWithRound(seriesId).map(series -> {
+            String letter = series.getSeriesCode(); // e.g. "A", "B", "I"
+            List<NhlApiService.SeriesGameSummary> games = nhlApiService.getSeriesGameHistory(
+                    letter, nhlApiService.getPlayoffStartDate());
+            return ResponseEntity.ok(games);
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/series/round/{roundNumber}")

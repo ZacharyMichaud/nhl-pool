@@ -35,6 +35,7 @@ export class StandingsComponent implements OnInit, OnDestroy {
   allTeams          = signal<any[]>([]);
   allTeamPredictions = signal<any[]>([]);
   predScoringRules  = signal<any[]>([]);  // PredictionScoringRule[]
+  seriesGames       = signal<Record<number, any[]>>({});  // seriesId → SeriesGameSummary[]
   saving            = signal(false);
   predictionDraft   = signal<Record<number, { winner: string; games: number } | undefined>>({});
 
@@ -97,6 +98,7 @@ export class StandingsComponent implements OnInit, OnDestroy {
       }).subscribe(({ series, preds }) => {
         this.series.set(series);
         this.allTeamPredictions.set(preds);
+        this.loadSeriesGames(series);
       });
     } else {
       forkJoin({
@@ -104,6 +106,7 @@ export class StandingsComponent implements OnInit, OnDestroy {
         savedPreds: this.api.getPredictions(round).pipe(catchError(() => of([]))),
       }).subscribe(({ series, savedPreds }) => {
         this.series.set(series);
+        this.loadSeriesGames(series);
         const savedMap: Record<number, { winner: string; games: number }> = {};
         savedPreds.forEach((p: any) => {
           savedMap[p.series.id] = { winner: p.predictedWinnerAbbrev, games: p.predictedGames };
@@ -115,6 +118,64 @@ export class StandingsComponent implements OnInit, OnDestroy {
         this.predictionDraft.set(draft);
       });
     }
+  }
+
+  private loadSeriesGames(seriesList: any[]) {
+    seriesList.forEach((s: any) => {
+      this.api.getSeriesGames(s.id).pipe(catchError(() => of([]))).subscribe((games: any[]) => {
+        this.seriesGames.update(map => ({ ...map, [s.id]: games }));
+      });
+    });
+  }
+
+  getGamesForSeries(seriesId: number): any[] {
+    return this.seriesGames()[seriesId] ?? [];
+  }
+
+  /** Returns the next scheduled (PRE/FUT) game for a series, or null if none. */
+  getNextGame(seriesId: number): any | null {
+    const upcoming = (this.seriesGames()[seriesId] ?? [])
+      .filter((g: any) => g.gameState === 'PRE' || g.gameState === 'FUT')
+      .sort((a: any, b: any) => a.gameNumber - b.gameNumber);
+    return upcoming[0] ?? null;
+  }
+
+  /** Returns only finished/live games (excludes PRE/FUT) for the history list. */
+  getPlayedGames(seriesId: number): any[] {
+    return (this.seriesGames()[seriesId] ?? [])
+      .filter((g: any) => g.gameState !== 'PRE' && g.gameState !== 'FUT');
+  }
+  /** Formats an ISO date string (yyyy-MM-dd) to DD/MM for compact display. */
+  formatGameDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const [, m, d] = dateStr.split('-');
+    return `${d}/${m}`;
+  }
+
+  /**
+   * Returns [topSeedScore, bottomSeedScore] for a game, so the score always
+   * aligns with the series card (top seed on left, bottom seed on right).
+   */
+  getAlignedGameScore(game: any, series: any): [number, number] {
+    const homeIsTop = game.homeAbbrev === series.topSeedAbbrev;
+    return homeIsTop
+      ? [game.homeScore, game.awayScore]
+      : [game.awayScore, game.homeScore];
+  }
+
+  /** Returns the OT/SO suffix for a finished game, empty string for regulation. */
+  getGameSuffix(game: any): string {
+    if (game.gameState === 'LIVE' || game.gameState === 'CRIT') return '';
+    if (game.periodType === 'OT') return 'OT';
+    if (game.periodType === 'SO') return 'SO';
+    return '';
+  }
+
+  /** Returns a compact period label for live games, e.g. '2P', 'OT', 'SO'. */
+  getLivePeriodLabel(game: any): string {
+    if (game.periodType === 'OT') return 'OT';
+    if (game.periodType === 'SO') return 'SO';
+    return `${game.periodNumber}P`;
   }
 
   isMyTeam(teamId: number): boolean {

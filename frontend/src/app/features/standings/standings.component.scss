@@ -166,7 +166,129 @@
   50%       { opacity: 0.3; }
 }
 
+// ── Game-by-game history ─────────────────────────────────────────────────────
+.game-history {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+}
+
+// ── Game rows ─────────────────────────────────────────────────────────────────
+.game-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 14px;
+  gap: 0;
+  font-size: 11px;
+  min-height: 24px;
+
+  &.game-live {
+    background: rgba(239, 68, 68, 0.05);
+    box-shadow: inset 3px 0 0 #ef4444;
+  }
+}
+
+// Left: G# · date · @venue  (flex: 1 so it takes all remaining space)
+.game-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.game-num {
+  font-size: 9px;
+  font-weight: 800;
+  font-family: 'SF Mono', 'Fira Mono', 'Roboto Mono', monospace;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  padding: 1px 4px;
+  flex-shrink: 0;
+}
+
+.game-date {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.game-venue {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+// Center: X–Y + suffix  (fixed width, centered)
+.game-score {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  width: 64px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  gap: 0;
+}
+
+.gscore-num {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  min-width: 12px;
+  text-align: center;
+}
+
+.gscore-dash {
+  font-weight: 300;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0 2px;
+}
+
+.gscore-suffix {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+// Right: period + time + dot (only populated for live games)
+.game-live-info {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 80px;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  font-size: 10px;
+  color: #ef4444;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.game-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+  animation: dot-pulse-red 1.2s ease-in-out infinite;
+}
+
+@keyframes dot-pulse-red {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+  50%       { opacity: 0.6; box-shadow: 0 0 0 3px rgba(239,68,68,0); }
+}
+
 // ── Pick-result strip (compact, shown below score on finished series) ─────────
+
 .pick-result-strip {
   display: flex;
   flex-wrap: wrap;

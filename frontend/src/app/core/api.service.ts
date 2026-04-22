@@ -93,6 +93,10 @@ export class ApiService {
     return this.http.get<any[]>(`${ API }/predictions/scoring-rules`);
   }
 
+  getSeriesGames(seriesId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${ API }/predictions/series/${ seriesId }/games`);
+  }
+
   // Admin
   syncRosters(): Observable<any> { return this.http.post(`${ API }/admin/sync/rosters`, {}); }
 

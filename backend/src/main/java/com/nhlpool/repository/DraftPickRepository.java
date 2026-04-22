@@ -20,4 +20,6 @@ public interface DraftPickRepository extends JpaRepository<DraftPick, Long> {
     List<DraftPick> findByTeamIdWithPlayerOrderByPickNumberAsc(@Param("teamId") Long teamId);
 
     long countByTeamId(Long teamId);
+
+    boolean existsByPlayerId(Long playerId);
 }

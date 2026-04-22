@@ -4,6 +4,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { catchError, forkJoin, of } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
+import { LiveGameService } from '../../core/live-game.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
 import { PoolBadgeComponent } from '../../shared/components/pool-badge/pool-badge.component';
@@ -19,6 +20,7 @@ export class SeriesComponent implements OnInit {
   private api      = inject(ApiService);
   private auth     = inject(AuthService);
   private snackBar = inject(MatSnackBar);
+  protected liveGame = inject(LiveGameService);
 
   predictionsLocked    = signal(false);
   selectedRound        = signal(1);
@@ -27,6 +29,8 @@ export class SeriesComponent implements OnInit {
   predictionDraft      = signal<Record<number, { winner: string; games: number } | undefined>>({});
   saving               = signal(false);
   allTeamPredictions   = signal<any[]>([]);
+  predScoringRules     = signal<any[]>([]);
+  seriesGames          = signal<Record<number, any[]>>({});  // seriesId → SeriesGameSummary[]
 
   readonly roundOptions = [
     { value: 1, label: 'Round 1' },
@@ -51,10 +55,12 @@ export class SeriesComponent implements OnInit {
     forkJoin({
       config:    this.api.getDraftConfig().pipe(catchError(() => of(null))),
       standings: this.api.getStandings().pipe(catchError(() => of([]))),
-    }).subscribe(({ config, standings }) => {
+      rules:     this.api.getPredictionScoringRules().pipe(catchError(() => of([]))),
+    }).subscribe(({ config, standings, rules }) => {
       const locked = Boolean(config?.predictionsLocked);
       this.predictionsLocked.set(locked);
       this.allTeams.set(standings);
+      this.predScoringRules.set(rules);
       this.loadRound(1, locked);
     });
   }
@@ -74,6 +80,7 @@ export class SeriesComponent implements OnInit {
       }).subscribe(({ series, preds }) => {
         this.series.set(series);
         this.allTeamPredictions.set(preds);
+        this.loadSeriesGames(series);
       });
     } else {
       forkJoin({
@@ -81,6 +88,7 @@ export class SeriesComponent implements OnInit {
         savedPreds: this.api.getPredictions(round).pipe(catchError(() => of([]))),
       }).subscribe(({ series, savedPreds }) => {
         this.series.set(series);
+        this.loadSeriesGames(series);
 
         const savedMap: Record<number, { winner: string; games: number }> = {};
         savedPreds.forEach((p: any) => {
@@ -94,6 +102,54 @@ export class SeriesComponent implements OnInit {
         this.predictionDraft.set(draft);
       });
     }
+  }
+
+  private loadSeriesGames(seriesList: any[]) {
+    seriesList.forEach((s: any) => {
+      this.api.getSeriesGames(s.id).pipe(catchError(() => of([]))).subscribe((games: any[]) => {
+        this.seriesGames.update(map => ({ ...map, [s.id]: games }));
+      });
+    });
+  }
+
+  getGamesForSeries(seriesId: number): any[] {
+    return this.seriesGames()[seriesId] ?? [];
+  }
+
+  getNextGame(seriesId: number): any | null {
+    const upcoming = (this.seriesGames()[seriesId] ?? [])
+      .filter((g: any) => g.gameState === 'PRE' || g.gameState === 'FUT')
+      .sort((a: any, b: any) => a.gameNumber - b.gameNumber);
+    return upcoming[0] ?? null;
+  }
+
+  getPlayedGames(seriesId: number): any[] {
+    return (this.seriesGames()[seriesId] ?? [])
+      .filter((g: any) => g.gameState !== 'PRE' && g.gameState !== 'FUT');
+  }
+
+  formatGameDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const [, m, d] = dateStr.split('-');
+    return `${d}/${m}`;
+  }
+
+  getAlignedGameScore(game: any, series: any): [number, number] {
+    const homeIsTop = game.homeAbbrev === series.topSeedAbbrev;
+    return homeIsTop ? [game.homeScore, game.awayScore] : [game.awayScore, game.homeScore];
+  }
+
+  getGameSuffix(game: any): string {
+    if (game.gameState === 'LIVE' || game.gameState === 'CRIT') return '';
+    if (game.periodType === 'OT') return 'OT';
+    if (game.periodType === 'SO') return 'SO';
+    return '';
+  }
+
+  getLivePeriodLabel(game: any): string {
+    if (game.periodType === 'OT') return 'OT';
+    if (game.periodType === 'SO') return 'SO';
+    return `${game.periodNumber}P`;
   }
 
   // ── Entry form helpers ─────────────────────────────────────────────────────
@@ -170,5 +226,19 @@ export class SeriesComponent implements OnInit {
 
   isMyTeam(teamId: number): boolean {
     return this.auth.teamId() === teamId;
+  }
+
+  /** Returns earned prediction points for a finished series, or null if not over / no pred. */
+  getSeriesPoints(s: any, pred: any | null): { winnerPts: number; gamesPts: number; total: number } | null {
+    if (!s.winnerAbbrev || !pred) return null;
+    const roundNumber: number = s.round?.roundNumber ?? this.selectedRound();
+    const rule = this.predScoringRules().find((r: any) => r.roundNumber === roundNumber);
+    if (!rule) return null;
+    const correctWinner = pred.predictedWinnerAbbrev === s.winnerAbbrev;
+    if (!correctWinner) return { winnerPts: 0, gamesPts: 0, total: 0 };
+    const winnerPts = rule.correctWinnerPoints ?? 0;
+    const exactGames = pred.predictedGames === (s.topSeedWins + s.bottomSeedWins);
+    const gamesPts = exactGames ? (rule.correctGamesBonus ?? 0) : 0;
+    return { winnerPts, gamesPts, total: winnerPts + gamesPts };
   }
 }

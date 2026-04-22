@@ -14,10 +14,9 @@
   <div class="series-grid" *ngIf="series().length > 0; else noSeries">
     <div *ngFor="let s of series()" class="series-card card">
 
-      <!-- Status bar -->
-      <div class="series-status" [class.complete]="s.winnerAbbrev">
-        <span class="status-dot" [class.active]="!s.winnerAbbrev"></span>
-        <span>{{ s.winnerAbbrev ? ('🏆 ' + s.winnerAbbrev + ' wins') : 'In Progress' }}</span>
+      <!-- Status bar: only shown when series has a winner -->
+      <div class="series-status complete" *ngIf="s.winnerAbbrev">
+        🏆 {{ s.winnerAbbrev }} wins in {{ s.topSeedWins + s.bottomSeedWins }} games
       </div>
 
       <!-- Matchup scores -->
@@ -27,9 +26,15 @@
           <span class="team-abbrev">{{ s.topSeedAbbrev }}</span>
         </div>
         <div class="score-block">
-          <span class="score">{{ s.topSeedWins }}</span>
-          <span class="score-sep">–</span>
-          <span class="score">{{ s.bottomSeedWins }}</span>
+          <div class="score-row">
+            <span class="score">{{ s.topSeedWins }}</span>
+            <span class="score-sep">–</span>
+            <span class="score">{{ s.bottomSeedWins }}</span>
+          </div>
+          <span class="live-indicator"
+            *ngIf="!s.winnerAbbrev && (liveGame.isLive(s.topSeedAbbrev) || liveGame.isLive(s.bottomSeedAbbrev))">
+            LIVE
+          </span>
         </div>
         <div class="team-side right" [class.winner]="s.winnerAbbrev === s.bottomSeedAbbrev" [class.loser]="s.winnerAbbrev && s.winnerAbbrev !== s.bottomSeedAbbrev">
           <span class="team-abbrev">{{ s.bottomSeedAbbrev }}</span>
@@ -37,22 +42,99 @@
         </div>
       </div>
 
+      <!-- Game-by-game history -->
+      <ng-container *ngIf="getGamesForSeries(s.id).length > 0">
+        <div class="game-history">
+
+          <!-- Next game (upcoming, shown dimmed) -->
+          <div *ngIf="!s.winnerAbbrev && getNextGame(s.id) as ng"
+               class="game-row game-pre">
+            <span class="game-meta">
+              <span class="game-num">G{{ ng.gameNumber }}</span>
+              <span class="game-date">{{ formatGameDate(ng.gameDate) }}</span>
+              <span class="game-venue">{{ '@' }}{{ ng.homeAbbrev }}</span>
+            </span>
+            <span class="game-score">
+              <span class="gscore-num">–</span>
+              <span class="gscore-dash">–</span>
+              <span class="gscore-num">–</span>
+            </span>
+            <span class="game-live-info"></span>
+          </div>
+
+          <!-- Played / live games (newest first) -->
+          <div *ngFor="let g of getPlayedGames(s.id).slice().reverse()"
+               class="game-row"
+               [class.game-live]="g.gameState === 'LIVE' || g.gameState === 'CRIT'">
+            <span class="game-meta">
+              <span class="game-num">G{{ g.gameNumber }}</span>
+              <span class="game-date">{{ formatGameDate(g.gameDate) }}</span>
+              <span class="game-venue">{{ '@' }}{{ g.homeAbbrev }}</span>
+            </span>
+            <span class="game-score">
+              <span class="gscore-num">{{ getAlignedGameScore(g, s)[0] }}</span>
+              <span class="gscore-dash">–</span>
+              <span class="gscore-num">{{ getAlignedGameScore(g, s)[1] }}</span>
+            </span>
+            <span class="game-live-info">
+              <ng-container *ngIf="g.gameState === 'LIVE' || g.gameState === 'CRIT'">
+                <span>{{ getLivePeriodLabel(g) }}</span>
+                <span>{{ g.periodTimeRemaining }}</span>
+                <span class="game-live-dot"></span>
+              </ng-container>
+              <span class="gscore-suffix" *ngIf="g.gameState !== 'LIVE' && g.gameState !== 'CRIT' && getGameSuffix(g)">{{ getGameSuffix(g) }}</span>
+            </span>
+          </div>
+
+        </div>
+      </ng-container>
+
+      <!-- Pick-result strip: compact summary shown when series is done + locked -->
+      <ng-container *ngIf="s.winnerAbbrev && predictionsLocked()">
+        <div class="pick-result-strip">
+          <div *ngFor="let entry of getAllPredsForSeries(s.id)"
+            class="strip-entry"
+            [class.strip-correct]="entry.pred && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
+            [class.strip-wrong]="entry.pred && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev"
+            [class.strip-no-pick]="!entry.pred">
+            <app-pool-badge [name]="entry.teamName" [colorIndex]="teamColorIndex(entry.teamId)"></app-pool-badge>
+            <ng-container *ngIf="entry.pred; else noPredMark">
+              <span *ngIf="entry.pred.predictedWinnerAbbrev === s.winnerAbbrev" class="mark-correct">✓</span>
+              <span *ngIf="entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev" class="mark-wrong">✗</span>
+              <span class="strip-games"
+                [class.strip-games-exact]="entry.pred.predictedGames === (s.topSeedWins + s.bottomSeedWins)">
+                {{ entry.pred.predictedGames }}G
+              </span>
+              <ng-container *ngIf="getSeriesPoints(s, entry.pred) as pts">
+                <span class="strip-pts"
+                  [class.strip-pts-win]="pts.total > 0"
+                  [class.strip-pts-bonus]="pts.gamesPts > 0"
+                  [class.strip-pts-zero]="pts.total === 0">
+                  +{{ pts.total }}
+                </span>
+              </ng-container>
+            </ng-container>
+            <ng-template #noPredMark><span class="strip-no-pred">—</span></ng-template>
+          </div>
+        </div>
+      </ng-container>
+
       <div class="card-divider"></div>
 
       <!-- LOCKED: predictions comparison table -->
       <ng-container *ngIf="predictionsLocked(); else entryForm">
         <div class="picks-list">
           <div *ngFor="let entry of getAllPredsForSeries(s.id)"
-               class="pick-row"
-               [class.my-row]="isMyTeam(entry.teamId)"
-               [class.correct]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
-               [class.wrong]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">
+            class="pick-row"
+            [class.my-row]="isMyTeam(entry.teamId)"
+            [class.correct]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
+            [class.wrong]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">
             <app-pool-badge [name]="entry.teamName" [colorIndex]="teamColorIndex(entry.teamId)"></app-pool-badge>
             <span class="pick-winner" *ngIf="entry.pred">
               <img *ngIf="getLogoForAbbrev(s, entry.pred.predictedWinnerAbbrev)"
-                   [src]="getLogoForAbbrev(s, entry.pred.predictedWinnerAbbrev)"
-                   class="pick-winner-logo"
-                   onerror="this.style.display='none'">
+                [src]="getLogoForAbbrev(s, entry.pred.predictedWinnerAbbrev)"
+                class="pick-winner-logo"
+                onerror="this.style.display='none'">
               {{ entry.pred.predictedWinnerAbbrev }}
             </span>
             <span class="pick-winner no-pick" *ngIf="!entry.pred">—</span>
@@ -60,9 +142,9 @@
             <span class="pick-games" *ngIf="!entry.pred">—</span>
             <span class="pick-result" *ngIf="s.winnerAbbrev && entry.pred">
               <span class="mark correct-mark" *ngIf="entry.pred.predictedWinnerAbbrev === s.winnerAbbrev">✓</span>
-              <span class="mark wrong-mark"   *ngIf="entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">✗</span>
+              <span class="mark wrong-mark" *ngIf="entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">✗</span>
             </span>
-            <span class="pick-result muted" *ngIf="!s.winnerAbbrev || !entry.pred">—</span>
+            <span class="pick-result muted" *ngIf="s.winnerAbbrev && !entry.pred">—</span>
           </div>
         </div>
       </ng-container>
@@ -103,8 +185,8 @@
         </ng-template>
       </ng-template>
 
-    </div>
-  </div>
+    </div><!-- end series-card -->
+  </div><!-- end series-grid -->
 
   <ng-template #noSeries>
     <div class="card empty-state">
@@ -114,14 +196,15 @@
     </div>
   </ng-template>
 
-  <!-- Save bar — only when unlocked and series exist -->
-  <div class="save-bar" *ngIf="!predictionsLocked() && series().length > 0">
-    <button class="btn-save"
-            id="series-save-btn"
-            (click)="saveAll()"
-            [disabled]="!hasAnyPrediction || saving()">
-      <span *ngIf="saving()">⏳ Saving…</span>
-      <span *ngIf="!saving()">💾 Save Predictions</span>
-    </button>
-  </div>
+</div><!-- end page-container -->
+
+<!-- Save bar — only when unlocked and series exist -->
+<div class="save-bar" *ngIf="!predictionsLocked() && series().length > 0">
+  <button class="btn-save"
+    id="series-save-btn"
+    (click)="saveAll()"
+    [disabled]="!hasAnyPrediction || saving()">
+    <span *ngIf="saving()">⏳ Saving…</span>
+    <span *ngIf="!saving()">💾 Save Predictions</span>
+  </button>
 </div>
