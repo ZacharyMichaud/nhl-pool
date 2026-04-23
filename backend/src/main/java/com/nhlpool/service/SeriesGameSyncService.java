@@ -60,12 +60,43 @@ public class SeriesGameSyncService {
         LocalDate today  = LocalDate.now(EASTERN);
         LocalDate cutoff = today.plusDays(LOOK_AHEAD_DAYS);
 
-        // Start scanning from the day of the last known game (re-check that day in case
-        // it was mid-game last time we ran), or from playoff start if nothing cached yet.
         List<SeriesGame> cached = seriesGameRepository.findBySeriesIdOrderByGameNumberAsc(series.getId());
-        LocalDate scanFrom = cached.isEmpty()
-                ? playoffStart
-                : cached.get(cached.size() - 1).getGameDate();
+
+        // ── Determine scan start ────────────────────────────────────────────────
+        // PROBLEM: using the last game's date fails when a PRE row (future date) is
+        // already stored — that makes scanFrom jump PAST any LIVE/unfinished rows.
+        //
+        // CORRECT strategy:
+        //   • If we have any LIVE or PRE rows, scan from the EARLIEST such row's date
+        //     so they get a chance to transition to FINAL.
+        //   • Always include at least yesterday as a safety net for overnight games.
+        //   • If all rows are FINAL, resume from the last FINAL date (incremental).
+        //   • If nothing cached, start from playoff start.
+        LocalDate scanFrom;
+        if (cached.isEmpty()) {
+            scanFrom = playoffStart;
+        } else {
+            // Earliest date among rows that are NOT yet final (LIVE, PRE, or null state)
+            LocalDate earliestUnfinished = cached.stream()
+                    .filter(g -> !"OFF".equals(g.getGameState()) && !"FINAL".equals(g.getGameState()))
+                    .map(SeriesGame::getGameDate)
+                    .min(LocalDate::compareTo)
+                    .orElse(null);
+
+            if (earliestUnfinished != null) {
+                // Re-scan from that date so LIVE rows can be finalized
+                scanFrom = earliestUnfinished;
+            } else {
+                // All rows are FINAL — resume from last known date
+                scanFrom = cached.get(cached.size() - 1).getGameDate();
+            }
+
+            // Safety net: always include yesterday to catch any game that finished
+            // after midnight and wasn't finalized in the same calendar day
+            if (scanFrom.isAfter(today.minusDays(1))) {
+                scanFrom = today.minusDays(1);
+            }
+        }
 
         for (LocalDate date = scanFrom; !date.isAfter(cutoff); date = date.plusDays(1)) {
             try {
@@ -91,28 +122,29 @@ public class SeriesGameSyncService {
                         int    gameNumber = ss.path("gameNumberOfSeries").asInt(0);
                         if (gameNumber <= 0) continue;
 
-                        // Skip in-progress games — handled by updateLiveGame() from the scheduler
+                        // Skip in-progress games — handled by updateAllLiveGames() every 30s
                         if ("LIVE".equals(state) || "CRIT".equals(state)) continue;
 
                         String awayAbbrev = game.path("awayTeam").path("abbrev").asText("");
                         String homeAbbrev = game.path("homeTeam").path("abbrev").asText("");
 
-                        boolean isFinal = "OFF".equals(state) || "FINAL".equals(state);
-                        int awayScore = isFinal ? game.path("awayTeam").path("score").asInt(0) : 0;
-                        int homeScore = isFinal ? game.path("homeTeam").path("score").asInt(0) : 0;
+                        boolean isFinal   = "OFF".equals(state) || "FINAL".equals(state);
+                        int awayScore     = isFinal ? game.path("awayTeam").path("score").asInt(0) : 0;
+                        int homeScore     = isFinal ? game.path("homeTeam").path("score").asInt(0) : 0;
 
-                        JsonNode pd      = game.path("periodDescriptor");
+                        JsonNode pd       = game.path("periodDescriptor");
                         String periodType = isFinal ? pd.path("periodType").asText("REG") : "REG";
 
-                        // Upsert: don't overwrite a FINAL/OFF row with a stale PRE state
                         SeriesGame sg = seriesGameRepository
                                 .findBySeriesIdAndGameNumber(series.getId(), gameNumber)
                                 .orElseGet(() -> SeriesGame.builder()
                                         .series(series)
                                         .gameNumber(gameNumber)
+                                        .periodNumber(0)
+                                        .timeRemaining("")
                                         .build());
 
-                        // Never downgrade a finished row back to PRE
+                        // Never downgrade a FINAL/OFF row back to PRE
                         boolean alreadyFinal = "OFF".equals(sg.getGameState()) || "FINAL".equals(sg.getGameState());
                         if (alreadyFinal && !isFinal) continue;
 
@@ -123,6 +155,11 @@ public class SeriesGameSyncService {
                         sg.setGameState(isFinal ? state : "PRE");
                         sg.setPeriodType(periodType);
                         sg.setGameDate(date);
+                        if (isFinal) {
+                            // Finalized — clear stale live-game fields
+                            sg.setPeriodNumber(0);
+                            sg.setTimeRemaining("");
+                        }
 
                         seriesGameRepository.save(sg);
                         log.debug("[GameSync] Upserted G{} ({} @ {}) state={} for series {}",

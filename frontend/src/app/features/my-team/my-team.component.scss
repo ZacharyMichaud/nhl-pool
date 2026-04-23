@@ -64,10 +64,9 @@
   font-weight: 800;
   flex-shrink: 0;
 
-  &.rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; }
-  &.rank-2 { background: linear-gradient(135deg, #C0C0C0, #A8A8A8); color: #000; }
-  &.rank-3 { background: linear-gradient(135deg, #CD7F32, #A0522D); color: #fff; }
-  &.rank-other { background: var(--bg-secondary); color: var(--text-secondary); }
+  // background, color, box-shadow are set via inline [style.*] bindings
+  // using the pool team's badge-palette colour
+  transition: box-shadow 0.2s;
 }
 
 .accordion-name-block {
