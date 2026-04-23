@@ -35,16 +35,16 @@
   <!-- Inline stats — right-aligned, same as player cards in My Team -->
   <div class="pc-stats" *ngIf="player">
     <div class="pc-stat">
+      <span class="val">{{ player.playoffGamesPlayed ?? player.gamesPlayed ?? 0 }}</span>
+      <span class="lbl">GP</span>
+    </div>
+    <div class="pc-stat">
       <span class="val">{{ player.playoffGoals ?? player.goals ?? 0 }}</span>
       <span class="lbl">G</span>
     </div>
     <div class="pc-stat">
       <span class="val">{{ player.playoffAssists ?? player.assists ?? 0 }}</span>
       <span class="lbl">A</span>
-    </div>
-    <div class="pc-stat">
-      <span class="val">{{ player.playoffGamesPlayed ?? player.gamesPlayed ?? 0 }}</span>
-      <span class="lbl">GP</span>
     </div>
     <div class="pc-stat highlight">
       <span class="val">{{ player.playoffPoints ?? player.points ?? pts }}</span>

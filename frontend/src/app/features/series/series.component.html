@@ -52,7 +52,7 @@
             <span class="game-meta">
               <span class="game-num">G{{ ng.gameNumber }}</span>
               <span class="game-date">{{ formatGameDate(ng.gameDate) }}</span>
-              <span class="game-venue">{{ '@' }}{{ ng.homeAbbrev }}</span>
+              <span class="game-venue">&#64;{{ ng.homeAbbrev }}</span>
             </span>
             <span class="game-score">
               <span class="gscore-num">–</span>
@@ -66,24 +66,31 @@
           <div *ngFor="let g of getPlayedGames(s.id).slice().reverse()"
                class="game-row"
                [class.game-live]="g.gameState === 'LIVE' || g.gameState === 'CRIT'">
+
+            <!-- col 1: G# · date · @venue -->
             <span class="game-meta">
               <span class="game-num">G{{ g.gameNumber }}</span>
               <span class="game-date">{{ formatGameDate(g.gameDate) }}</span>
-              <span class="game-venue">{{ '@' }}{{ g.homeAbbrev }}</span>
+              <span class="game-venue">&#64;{{ g.homeAbbrev }}</span>
             </span>
+
+            <!-- col 2: digits + dash only — no suffix so width is always constant -->
             <span class="game-score">
               <span class="gscore-num">{{ getAlignedGameScore(g, s)[0] }}</span>
               <span class="gscore-dash">–</span>
               <span class="gscore-num">{{ getAlignedGameScore(g, s)[1] }}</span>
             </span>
+
+            <!-- col 3: OT at flex-start, live period+time+dot at flex-end -->
             <span class="game-live-info">
-              <ng-container *ngIf="g.gameState === 'LIVE' || g.gameState === 'CRIT'">
+              <span class="game-live-period" *ngIf="g.gameState === 'LIVE' || g.gameState === 'CRIT'">
                 <span>{{ getLivePeriodLabel(g) }}</span>
                 <span>{{ g.periodTimeRemaining }}</span>
                 <span class="game-live-dot"></span>
-              </ng-container>
+              </span>
               <span class="gscore-suffix" *ngIf="g.gameState !== 'LIVE' && g.gameState !== 'CRIT' && getGameSuffix(g)">{{ getGameSuffix(g) }}</span>
             </span>
+
           </div>
 
         </div>

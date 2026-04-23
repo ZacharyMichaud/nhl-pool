@@ -3,6 +3,8 @@ package com.nhlpool.domain;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "series")
 @Getter
@@ -41,6 +43,11 @@ public class Series {
 
     // Null until series is over
     private String winnerAbbrev;
+
+    // Next scheduled game info (null when series is over or not yet known)
+    private LocalDate nextGameDate;
+    private String   nextGameHomeAbbrev;
+    private String   nextGameAwayAbbrev;
 
     public boolean isCompleted() {
         return winnerAbbrev != null;

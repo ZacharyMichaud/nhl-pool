@@ -11,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import com.nhlpool.service.NhlApiService;
+import com.nhlpool.service.NhlApiService.SeriesGameSummary;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,6 +31,7 @@ public class PredictionController {
     private final com.nhlpool.repository.DraftConfigRepository draftConfigRepository;
     private final com.nhlpool.repository.PredictionScoringRuleRepository predictionScoringRuleRepository;
     private final NhlApiService nhlApiService;
+    private final SeriesGameRepository seriesGameRepository;
 
     @GetMapping("/round/{roundNumber}")
     @Transactional(readOnly = true)
@@ -115,18 +118,35 @@ public class PredictionController {
     }
 
     /**
-     * Returns game-by-game history for a given series, fetched live from the NHL API.
-     * Games are ordered chronologically. Live games include period and time info.
+     * Returns game-by-game history for a given series.
+     * Pure DB read — no NHL API calls.
+     *
+     * The series_game table is kept current by:
+     *   - SeriesGameSyncService.syncAllSeriesGames()  (post-game, on demand)
+     *   - SeriesGameSyncService.updateLiveGame()       (every 30s while a game is live)
+     *
+     * PRE rows exist for the next scheduled game (score 0-0).
+     * LIVE rows have current scores + period/clock from the last 30s update.
+     * FINAL/OFF rows are the permanent final results.
      */
     @GetMapping("/series/{seriesId}/games")
-    public ResponseEntity<List<NhlApiService.SeriesGameSummary>> getSeriesGames(
-            @PathVariable Long seriesId) {
-        return seriesRepository.findByIdWithRound(seriesId).map(series -> {
-            String letter = series.getSeriesCode(); // e.g. "A", "B", "I"
-            List<NhlApiService.SeriesGameSummary> games = nhlApiService.getSeriesGameHistory(
-                    letter, nhlApiService.getPlayoffStartDate());
-            return ResponseEntity.ok(games);
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<List<SeriesGameSummary>> getSeriesGames(@PathVariable Long seriesId) {
+        List<SeriesGame> games = seriesGameRepository.findBySeriesIdOrderByGameNumberAsc(seriesId);
+        List<SeriesGameSummary> result = games.stream()
+                .map(g -> new SeriesGameSummary(
+                        g.getGameNumber(),
+                        g.getAwayAbbrev(),
+                        g.getHomeAbbrev(),
+                        g.getAwayScore(),
+                        g.getHomeScore(),
+                        g.getGameState(),
+                        g.getPeriodType(),
+                        g.getPeriodNumber() != null ? g.getPeriodNumber() : 0,
+                        g.getTimeRemaining() != null ? g.getTimeRemaining() : "",
+                        g.getGameDate().toString()
+                ))
+                .toList();
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/series/round/{roundNumber}")

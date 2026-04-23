@@ -22,6 +22,7 @@ public class AdminController {
     private final NhlApiService nhlApiService;
     private final ScoringService scoringService;
     private final SeriesSyncService seriesSyncService;
+    private final SeriesGameSyncService seriesGameSyncService;
     private final PoolTeamRepository poolTeamRepository;
     private final UserRepository userRepository;
     private final PoolRoundRepository poolRoundRepository;
@@ -155,7 +156,14 @@ public class AdminController {
     @PostMapping("/sync/series")
     public ResponseEntity<Map<String, String>> syncSeries() {
         seriesSyncService.syncSeriesFromApi();
-        return ResponseEntity.ok(Map.of("message", "Series sync complete"));
+        seriesGameSyncService.syncAllSeriesGames();
+        return ResponseEntity.ok(Map.of("message", "Series + game history sync complete"));
+    }
+
+    @PostMapping("/sync/series-games")
+    public ResponseEntity<Map<String, String>> syncSeriesGames() {
+        seriesGameSyncService.syncAllSeriesGames();
+        return ResponseEntity.ok(Map.of("message", "Series game cache refresh complete"));
     }
 
     @GetMapping("/users")

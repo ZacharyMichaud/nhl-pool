@@ -176,20 +176,20 @@
             <span class="game-venue">&#64;{{ g.homeAbbrev }}</span>
           </span>
 
-          <!-- col 2: score (fixed 60px, tabular numerics) -->
+          <!-- col 2: digits + dash only — no suffix, so width is always constant -->
           <span class="game-score">
             <span class="gscore-num">{{ getAlignedGameScore(g, s)[0] }}</span>
             <span class="gscore-dash">–</span>
             <span class="gscore-num">{{ getAlignedGameScore(g, s)[1] }}</span>
           </span>
 
-          <!-- col 3: suffix (OT/SO) or live period+time+dot -->
+          <!-- col 3: OT suffix (finished) OR live period+time+dot -->
           <span class="game-live-info">
-            <ng-container *ngIf="g.gameState === 'LIVE' || g.gameState === 'CRIT'">
+            <span class="game-live-period" *ngIf="g.gameState === 'LIVE' || g.gameState === 'CRIT'">
               <span>{{ getLivePeriodLabel(g) }}</span>
               <span>{{ g.periodTimeRemaining }}</span>
               <span class="game-live-dot"></span>
-            </ng-container>
+            </span>
             <span class="gscore-suffix" *ngIf="g.gameState !== 'LIVE' && g.gameState !== 'CRIT' && getGameSuffix(g)">{{ getGameSuffix(g) }}</span>
           </span>
 

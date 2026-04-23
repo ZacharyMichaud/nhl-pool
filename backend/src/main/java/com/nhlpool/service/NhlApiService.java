@@ -35,6 +35,10 @@ public class NhlApiService {
         return java.time.LocalDate.parse(playoffStartDateStr);
     }
 
+    /** Exposes the NHL API WebClient for reuse in other services (e.g. SeriesGameSyncService). */
+    public WebClient getNhlApiClient() {
+        return nhlApiClient;
+    }
 
     /**
      * Fetches the playoff bracket/series carousel and returns the raw JSON
@@ -474,6 +478,58 @@ public class NhlApiService {
 
         games.sort(Comparator.comparingInt(SeriesGameSummary::gameNumber));
         return games;
+    }
+
+    /**
+     * Checks today's NHL schedule for a currently LIVE or CRIT game belonging to the given series.
+     * Returns null if no live game is found. This is a single cheap API call.
+     */
+    public SeriesGameSummary getLiveGameForSeries(String seriesLetter) {
+        ZoneId eastern = ZoneId.of("America/New_York");
+        LocalDate today = LocalDate.now(eastern);
+        try {
+            JsonNode schedule = nhlApiClient.get()
+                    .uri("/schedule/{date}", today.toString())
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+
+            if (schedule == null || !schedule.has("gameWeek")) return null;
+
+            for (JsonNode dayNode : schedule.get("gameWeek")) {
+                for (JsonNode game : dayNode.path("games")) {
+                    if (game.path("gameType").asInt(0) != 3) continue;
+
+                    JsonNode ss = game.path("seriesStatus");
+                    if (ss.isMissingNode()) continue;
+                    if (!seriesLetter.equalsIgnoreCase(ss.path("seriesLetter").asText(""))) continue;
+
+                    String state = game.path("gameState").asText("");
+                    if (!"LIVE".equals(state) && !"CRIT".equals(state)) continue;
+
+                    int    gameNumber  = ss.path("gameNumberOfSeries").asInt(0);
+                    String awayAbbrev  = game.path("awayTeam").path("abbrev").asText("");
+                    String homeAbbrev  = game.path("homeTeam").path("abbrev").asText("");
+                    int    awayScore   = game.path("awayTeam").path("score").asInt(0);
+                    int    homeScore   = game.path("homeTeam").path("score").asInt(0);
+
+                    JsonNode pd = game.path("periodDescriptor");
+                    int    periodNum  = pd.path("number").asInt(0);
+                    String periodType = pd.path("periodType").asText("REG");
+                    String timeLeft   = game.path("clock").path("timeRemaining").asText("");
+
+                    return new SeriesGameSummary(
+                            gameNumber, awayAbbrev, homeAbbrev,
+                            awayScore, homeScore, state,
+                            periodType, periodNum, timeLeft,
+                            today.toString()
+                    );
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[LiveCheck] Failed to check live game for series {}: {}", seriesLetter, e.getMessage());
+        }
+        return null;
     }
 
     public Set<String> getPlayoffTeamAbbrevs() {

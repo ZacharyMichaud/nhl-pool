@@ -163,18 +163,16 @@ export class StandingsComponent implements OnInit, OnDestroy {
       : [game.awayScore, game.homeScore];
   }
 
-  /** Returns the OT/SO suffix for a finished game, empty string for regulation. */
+  /** Returns the OT suffix for a finished game, empty string for regulation. (No SO in playoffs.) */
   getGameSuffix(game: any): string {
     if (game.gameState === 'LIVE' || game.gameState === 'CRIT') return '';
     if (game.periodType === 'OT') return 'OT';
-    if (game.periodType === 'SO') return 'SO';
     return '';
   }
 
-  /** Returns a compact period label for live games, e.g. '2P', 'OT', 'SO'. */
+  /** Returns a compact period label for live games, e.g. '2P', 'OT'. (No SO in playoffs.) */
   getLivePeriodLabel(game: any): string {
     if (game.periodType === 'OT') return 'OT';
-    if (game.periodType === 'SO') return 'SO';
     return `${game.periodNumber}P`;
   }
 

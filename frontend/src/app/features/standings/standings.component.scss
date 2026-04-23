@@ -175,26 +175,28 @@
 }
 
 // ── Game rows ─────────────────────────────────────────────────────────────────
+// 1fr auto 1fr grid: both flanking columns get equal space so the score
+// (auto column) is ALWAYS geometrically centered, regardless of content.
 .game-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 4px 14px;
-  gap: 0;
   font-size: 11px;
   min-height: 24px;
 
   &.game-live {
     background: rgba(239, 68, 68, 0.05);
+    // inset shadow — never shifts layout widths
     box-shadow: inset 3px 0 0 #ef4444;
   }
 }
 
-// Left: G# · date · @venue  (flex: 1 so it takes all remaining space)
+// Left column: G# · date · @venue
 .game-meta {
   display: flex;
   align-items: center;
   gap: 5px;
-  flex: 1;
   min-width: 0;
   overflow: hidden;
 }
@@ -224,13 +226,12 @@
   flex-shrink: 0;
 }
 
-// Center: X–Y + suffix  (fixed width, centered)
+// Center column: score + optional OT inline
+// auto-sized by the grid, always sits in the exact middle
 .game-score {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  width: 64px;
-  flex-shrink: 0;
   white-space: nowrap;
   gap: 0;
 }
@@ -246,31 +247,43 @@
 
 .gscore-dash {
   font-weight: 300;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin: 0 2px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0 3px;
 }
 
+// OT badge sits right of the second digit, same baseline
 .gscore-suffix {
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.4px;
+  margin-left: 4px;
+  line-height: 1;
+  align-self: center;
 }
 
-// Right: period + time + dot (only populated for live games)
+// Right column: OT (finished) or live period+time+dot — anchored to left edge
+// so content appears immediately right of the centered score
 .game-live-info {
   display: flex;
   align-items: center;
   gap: 3px;
-  width: 80px;
-  flex-shrink: 0;
-  justify-content: flex-end;
+  justify-content: flex-start;
   font-size: 10px;
-  color: #ef4444;
+  color: var(--text-muted);
   font-weight: 700;
   white-space: nowrap;
+}
+
+// Live period/time/dot — red, pushed to the right end of the row
+.game-live-period {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #ef4444;
+  margin-left: auto;
 }
 
 .game-live-dot {

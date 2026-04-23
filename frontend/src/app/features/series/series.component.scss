@@ -160,12 +160,12 @@ $mobile: 768px;
   border-top: 1px solid var(--border);
 }
 
-// ── Game rows ─────────────────────────────────────────────────────────────────
+// ── Game rows (1fr auto 1fr grid: score is always geometrically centered) ─────
 .game-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 4px 14px;
-  gap: 0;
   font-size: 11px;
   min-height: 24px;
 
@@ -173,13 +173,15 @@ $mobile: 768px;
     background: rgba(239, 68, 68, 0.05);
     box-shadow: inset 3px 0 0 #ef4444;
   }
+
+  &.game-pre { opacity: 0.45; }
 }
 
+// Left column
 .game-meta {
   display: flex;
   align-items: center;
   gap: 5px;
-  flex: 1;
   min-width: 0;
   overflow: hidden;
 }
@@ -209,12 +211,11 @@ $mobile: 768px;
   flex-shrink: 0;
 }
 
+// Center column: digits + dash only (no OT, so width never changes)
 .game-score {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  width: 64px;
-  flex-shrink: 0;
   white-space: nowrap;
   gap: 0;
 }
@@ -230,30 +231,42 @@ $mobile: 768px;
 
 .gscore-dash {
   font-weight: 300;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin: 0 2px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0 3px;
 }
 
+// OT badge — flex-start of right column, right next to the score
 .gscore-suffix {
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.4px;
+  margin-left: 4px;
+  line-height: 1;
+  align-self: center;
 }
 
+// Right column: OT (flex-start) and live period/dot (flex-end via margin-left:auto)
 .game-live-info {
   display: flex;
   align-items: center;
   gap: 3px;
-  width: 80px;
-  flex-shrink: 0;
-  justify-content: flex-end;
+  justify-content: flex-start;
   font-size: 10px;
-  color: #ef4444;
+  color: var(--text-muted);
   font-weight: 700;
   white-space: nowrap;
+}
+
+// Live period+time+dot pushed to the right end
+.game-live-period {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #ef4444;
+  margin-left: auto;
 }
 
 .game-live-dot {

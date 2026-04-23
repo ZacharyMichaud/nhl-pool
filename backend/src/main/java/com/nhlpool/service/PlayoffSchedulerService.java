@@ -29,6 +29,7 @@ public class PlayoffSchedulerService {
 
     private final NhlApiService nhlApiService;
     private final SeriesSyncService seriesSyncService;
+    private final SeriesGameSyncService seriesGameSyncService;
     private final PlayerSyncService playerSyncService;
     private final PlayerRepository playerRepository;
 
@@ -104,6 +105,13 @@ public class PlayoffSchedulerService {
             log.debug("[Scheduler] Tracking {} game(s) today: {}", games.size(), games.keySet());
             catchUpFinishedGames(games);
         }
+
+        // Keep the game cache fresh (populates on first boot, catches any missed games)
+        try {
+            seriesGameSyncService.syncAllSeriesGames();
+        } catch (Exception e) {
+            log.warn("[Scheduler] series-game sync during schedule refresh failed: {}", e.getMessage());
+        }
     }
 
     /**
@@ -121,6 +129,7 @@ public class PlayoffSchedulerService {
                     List<Player> drafted = playerRepository.findByDraftedTrue();
                     nhlApiService.syncDraftedPlayersFromBoxscore(drafted, gameId);
                     seriesSyncService.syncSeriesFromApi();
+                    seriesGameSyncService.syncAllSeriesGames();
                     playerSyncService.broadcastStatsUpdated();
                     log.info("[Scheduler] Catch-up sync complete for game {}.", gameId);
                 } catch (Exception e) {
@@ -150,6 +159,13 @@ public class PlayoffSchedulerService {
         boolean anyActive = todaysGames.entrySet().stream()
                 .anyMatch(e -> !processedGames.contains(e.getKey()) && !now.isBefore(e.getValue()));
         if (!anyActive) return;
+
+        // Update all live game rows in series_game with one schedule API call
+        boolean anyLive = todaysGames.entrySet().stream()
+                .anyMatch(e -> !processedGames.contains(e.getKey()) && !now.isBefore(e.getValue()));
+        if (anyLive) {
+            try { seriesGameSyncService.updateAllLiveGames(); } catch (Exception ignored) {}
+        }
 
         for (Map.Entry<Long, Instant> entry : todaysGames.entrySet()) {
             long gameId    = entry.getKey();
@@ -182,6 +198,7 @@ public class PlayoffSchedulerService {
                         List<Player> drafted = playerRepository.findByDraftedTrue();
                         nhlApiService.syncDraftedPlayersFromBoxscore(drafted, gameId);
                         seriesSyncService.syncSeriesFromApi();
+                        seriesGameSyncService.syncAllSeriesGames();
                         playerSyncService.broadcastStatsUpdated();
                     } catch (Exception e) {
                         log.error("[Scheduler] Error during post-game sync (pass {}) for game {}", pass + 1, gameId, e);
@@ -192,7 +209,7 @@ public class PlayoffSchedulerService {
                 }
 
             } else if ("LIVE".equals(gameState) || "CRIT".equals(gameState)) {
-                // Game is live — check for new goals
+                // DB already updated above via updateAllLiveGames() — just check for new goals
                 checkForNewGoals(gameId);
 
             } else {
