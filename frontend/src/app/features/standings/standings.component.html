@@ -24,7 +24,10 @@
             (keydown.enter)="goToTeam(team.teamId)">
 
             <td class="col-rank">
-              <span class="rank-badge" [ngClass]="'rank-' + (i < 3 ? (i + 1) : 'other')">
+              <span class="rank-badge"
+                [style.background]="'rgba(' + hexToRgb(rankColor(i)) + ', 0.18)'"
+                [style.color]="rankColor(i)"
+                [style.box-shadow]="'0 2px 8px rgba(' + hexToRgb(rankColor(i)) + ', 0.35)'">
                 {{ i + 1 }}
               </span>
             </td>

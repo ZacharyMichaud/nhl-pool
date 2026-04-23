@@ -86,6 +86,19 @@ export class MyTeamComponent implements OnInit, OnDestroy {
     return this.teamColorMap()[teamId] ?? '#00C3FF';
   }
 
+  /** Returns the badge-palette hex colour for the 0-based standings index `i`. */
+  rankColor(i: number): string {
+    return POOL_TEAM_PALETTE[i % POOL_TEAM_PALETTE.length];
+  }
+
+  /** Converts a '#rrggbb' hex string to 'r, g, b' for use in rgba() expressions. */
+  hexToRgb(hex: string): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `${r}, ${g}, ${b}`;
+  }
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   ngOnInit() {
     const paramTeamId = this.route.snapshot.queryParamMap.get('teamId');

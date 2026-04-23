@@ -218,6 +218,27 @@ export class StandingsComponent implements OnInit, OnDestroy {
     return idx === -1 ? 0 : idx % 10;
   }
 
+  /**
+   * Returns the badge-palette hex colour for the 0-based standings index `i`.
+   * Mirrors the $colors list used by PoolBadgeComponent.
+   */
+  private static readonly BADGE_COLORS = [
+    '#00c3ff', '#ff6b6b', '#ffd166', '#06d6a0', '#a78bfa',
+    '#fb923c', '#f472b6', '#34d399', '#60a5fa', '#fbbf24',
+  ];
+
+  rankColor(i: number): string {
+    return StandingsComponent.BADGE_COLORS[i % 10];
+  }
+
+  /** Converts a '#rrggbb' hex string to 'r, g, b' for use in rgba() expressions. */
+  hexToRgb(hex: string): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `${r}, ${g}, ${b}`;
+  }
+
   getLogoForAbbrev(s: any, abbrev: string): string {
     if (!abbrev) return '';
     if (s.topSeedAbbrev === abbrev) return s.topSeedLogoUrl || '';
