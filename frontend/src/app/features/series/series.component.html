@@ -97,7 +97,7 @@
       </ng-container>
 
       <!-- Pick-result strip: compact summary shown when series is done + locked -->
-      <ng-container *ngIf="s.winnerAbbrev && isSeriesLocked(s)">
+      <ng-container *ngIf="s.winnerAbbrev && isPicksRevealed(s)">
         <div class="pick-result-strip">
           <div *ngFor="let entry of getAllPredsForSeries(s.id)"
             class="strip-entry"
@@ -129,7 +129,7 @@
       <div class="card-divider"></div>
 
       <!-- LOCKED: predictions comparison table -->
-      <ng-container *ngIf="isSeriesLocked(s); else entryForm">
+      <ng-container *ngIf="isPicksRevealed(s); else entryForm">
         <div class="picks-list">
           <div *ngFor="let entry of getAllPredsForSeries(s.id)"
             class="pick-row"

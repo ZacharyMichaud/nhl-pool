@@ -7,6 +7,7 @@ import com.nhlpool.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -193,13 +194,26 @@ public class AdminController {
         return ResponseEntity.ok("All team assignments cleared");
     }
 
-    /** Toggle the predictions-locked flag. */
+    /** Toggle the predictions-locked flag (global — kept for backwards compat). */
     @PostMapping("/lock/predictions")
     public ResponseEntity<DraftConfig> togglePredictionsLock() {
         DraftConfig cfg = draftConfigRepository.findAll().stream().findFirst()
                 .orElseThrow(() -> new IllegalStateException("Draft config not found"));
         cfg.setPredictionsLocked(!Boolean.TRUE.equals(cfg.getPredictionsLocked()));
         return ResponseEntity.ok(draftConfigRepository.save(cfg));
+    }
+
+    /** Toggle predictions lock for a specific series. */
+    @PostMapping("/lock/series/{seriesId}")
+    @Transactional
+    public ResponseEntity<Series> toggleSeriesPredictionsLock(@PathVariable Long seriesId) {
+        Series series = seriesRepository.findByIdWithRound(seriesId)
+                .orElseThrow(() -> new IllegalArgumentException("Series not found"));
+        series.setPredictionsLocked(!Boolean.TRUE.equals(series.getPredictionsLocked()));
+        seriesRepository.save(series);
+        // Re-fetch with round eagerly loaded so Jackson can serialize it
+        Series updated = seriesRepository.findByIdWithRound(seriesId).orElseThrow();
+        return ResponseEntity.ok(updated);
     }
 
     /** Toggle the Conn Smythe locked flag. */

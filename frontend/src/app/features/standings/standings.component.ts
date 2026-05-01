@@ -31,7 +31,6 @@ export class StandingsComponent implements OnInit, OnDestroy {
   standings         = signal<any[]>([]);
   series            = signal<any[]>([]);
   selectedRound     = signal(1);
-  predictionsLocked = signal(false);   // admin override
   allTeams          = signal<any[]>([]);
   allTeamPredictions = signal<any[]>([]);
   predScoringRules  = signal<any[]>([]);  // PredictionScoringRule[]
@@ -60,14 +59,12 @@ export class StandingsComponent implements OnInit, OnDestroy {
     this.draftEvent.connect();
     forkJoin({
       standings: this.api.getStandings().pipe(catchError(() => of([]))),
-      config:    this.api.getDraftConfig().pipe(catchError(() => of(null))),
       rules:     this.api.getPredictionScoringRules().pipe(catchError(() => of([]))),
       rounds:    this.api.getPublicRounds().pipe(catchError(() => of([]))),
-    }).subscribe(({ standings, config, rules, rounds }) => {
+    }).subscribe(({ standings, rules, rounds }) => {
       this.standings.set(standings);
       this.allTeams.set(standings);
       this.predScoringRules.set(rules);
-      this.predictionsLocked.set(Boolean(config?.predictionsLocked));
 
       const defaultRound = this.computeDefaultRound(rounds);
       this.loadRound(defaultRound);
@@ -102,23 +99,14 @@ export class StandingsComponent implements OnInit, OnDestroy {
     this.statsSub?.unsubscribe();
   }
 
-  /**
-   * A series is "open" for predictions when:
-   * - No games have been played (0-0)
-   * - No winner exists
-   * - Admin has NOT manually locked predictions
-   */
+  /** A series is "open" for predictions when the admin hasn't locked it. */
   isSeriesOpen(s: any): boolean {
-    if (this.predictionsLocked()) return false;
-    return !s.winnerAbbrev && s.topSeedWins === 0 && s.bottomSeedWins === 0;
+    return !s.predictionsLocked;
   }
 
-  /**
-   * A series is "locked" when in-progress, completed, or admin has force-locked.
-   * Other teams' picks are visible for locked series.
-   */
-  isSeriesLocked(s: any): boolean {
-    return !this.isSeriesOpen(s);
+  /** Other teams' picks are visible when the series is locked. */
+  isPicksRevealed(s: any): boolean {
+    return !!s.predictionsLocked;
   }
 
   selectRound(round: number) {

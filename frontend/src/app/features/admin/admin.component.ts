@@ -30,6 +30,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   rounds = signal<any[]>([]);
   scoringRules = signal<any[]>([]);
   predictionRules = signal<any[]>([]);
+  adminSeries = signal<any[]>([]);  // all series for the lock management UI
 
   playersPerTeam = 10;
   draftOrderTeamIds: number[] = [];
@@ -85,6 +86,7 @@ export class AdminComponent implements OnInit, OnDestroy {
       this.scoringRules.set(r.playerRules || []);
       this.predictionRules.set(r.predictionRules || []);
     });
+    this.api.getAllSeries().pipe(catchError(() => EMPTY)).subscribe((s: any[]) => this.adminSeries.set(s));
   }
 
 
@@ -264,12 +266,21 @@ export class AdminComponent implements OnInit, OnDestroy {
     }
   }
 
+  getSeriesForRound(roundNumber: number): any[] {
+    return this.adminSeries().filter(s => s.round?.roundNumber === roundNumber);
+  }
 
-  togglePredictionsLock() {
-    this.api.lockPredictions().subscribe({
-      next: (cfg: any) => {
-        this.draftConfig.set(cfg);
-        this.show(cfg.predictionsLocked ? '🔒 Predictions locked' : '🔓 Predictions unlocked');
+
+  toggleSeriesLock(seriesId: number) {
+    this.api.toggleSeriesLock(seriesId).subscribe({
+      next: (updated: any) => {
+        // Update the series in our local list
+        this.adminSeries.update(list =>
+          list.map(s => s.id === updated.id ? { ...s, predictionsLocked: updated.predictionsLocked } : s)
+        );
+        this.show(updated.predictionsLocked
+          ? `🔒 ${updated.topSeedAbbrev} vs ${updated.bottomSeedAbbrev} locked`
+          : `🔓 ${updated.topSeedAbbrev} vs ${updated.bottomSeedAbbrev} unlocked`);
       },
       error: (e: any) => this.show(e.error?.error || 'Failed'),
     });

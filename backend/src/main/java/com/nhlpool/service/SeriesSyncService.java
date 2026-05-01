@@ -45,12 +45,20 @@ public class SeriesSyncService {
 
             seriesArray.forEach(seriesNode -> {
                 String seriesCode = seriesNode.path("seriesLetter").asText();
-                String topAbbrev   = seriesNode.path("topSeed").path("abbrev").asText();
-                String bottomAbbrev = seriesNode.path("bottomSeed").path("abbrev").asText();
+                String topAbbrev   = seriesNode.path("topSeed").path("abbrev").asText("");
+                String bottomAbbrev = seriesNode.path("bottomSeed").path("abbrev").asText("");
                 int topWins    = seriesNode.path("topSeed").path("wins").asInt(0);
                 int bottomWins = seriesNode.path("bottomSeed").path("wins").asInt(0);
                 String topLogo    = seriesNode.path("topSeed").path("darkLogo").asText("");
                 String bottomLogo = seriesNode.path("bottomSeed").path("darkLogo").asText("");
+
+                // Skip series where one or both teams aren't confirmed yet
+                if (topAbbrev.isEmpty() || bottomAbbrev.isEmpty()
+                        || "TBD".equalsIgnoreCase(topAbbrev) || "TBD".equalsIgnoreCase(bottomAbbrev)) {
+                    log.debug("Series {} in round {} has unconfirmed teams ({} vs {}) — skipping",
+                            seriesCode, roundNumber, topAbbrev, bottomAbbrev);
+                    return;
+                }
 
                 // Find or create this series
                 List<Series> existing = seriesRepository.findByRoundNumber(roundNumber);
@@ -64,6 +72,9 @@ public class SeriesSyncService {
                                 .bottomSeedAbbrev(bottomAbbrev)
                                 .build());
 
+                // Always refresh team abbreviations (matchup may have been confirmed since last sync)
+                series.setTopSeedAbbrev(topAbbrev);
+                series.setBottomSeedAbbrev(bottomAbbrev);
                 series.setTopSeedWins(topWins);
                 series.setBottomSeedWins(bottomWins);
                 series.setTopSeedLogoUrl(topLogo);

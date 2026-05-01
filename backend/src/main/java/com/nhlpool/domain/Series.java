@@ -49,6 +49,10 @@ public class Series {
     private String   nextGameHomeAbbrev;
     private String   nextGameAwayAbbrev;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean predictionsLocked = false;
+
     public boolean isCompleted() {
         return winnerAbbrev != null;
     }

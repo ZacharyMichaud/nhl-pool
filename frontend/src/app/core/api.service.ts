@@ -77,6 +77,10 @@ export class ApiService {
     return this.http.get<any[]>(url);
   }
 
+  getAllSeries(): Observable<any[]> {
+    return this.http.get<any[]>(`${ API }/predictions/series`);
+  }
+
   getPredictions(roundNumber: number): Observable<any[]> {
     return this.http.get<any[]>(`${ API }/predictions/round/${ roundNumber }`);
   }
@@ -152,6 +156,8 @@ export class ApiService {
   updateDraftConfig(data: any): Observable<any> { return this.http.put(`${ API }/draft/config`, data); }
 
   lockPredictions(): Observable<any> { return this.http.post(`${ API }/admin/lock/predictions`, {}); }
+
+  toggleSeriesLock(seriesId: number): Observable<any> { return this.http.post(`${ API }/admin/lock/series/${seriesId}`, {}); }
 
   lockConnSmythe(): Observable<any> { return this.http.post(`${ API }/admin/lock/conn-smythe`, {}); }
 }

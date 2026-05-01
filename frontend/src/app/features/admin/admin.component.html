@@ -153,15 +153,25 @@
     <!-- Prediction & Conn Smythe Locks -->
     <div class="card">
       <h2>🔒 Locks</h2>
-      <p class="lock-note">Predictions also lock automatically when a series starts.</p>
+      <p class="lock-note">Lock each series to reveal everyone's picks and prevent further edits.</p>
+
+      <ng-container *ngFor="let round of rounds()">
+        <ng-container *ngIf="getSeriesForRound(round.roundNumber).length > 0">
+          <h3 class="lock-round-label">{{ getRoundLabel(round.roundNumber) }}</h3>
+          <div class="lock-buttons">
+            <button *ngFor="let s of getSeriesForRound(round.roundNumber)"
+              class="btn-lock"
+              [class.locked]="s.predictionsLocked"
+              (click)="toggleSeriesLock(s.id)">
+              {{ s.predictionsLocked ? '🔒' : '🔓' }}
+              {{ s.topSeedAbbrev }} vs {{ s.bottomSeedAbbrev }}
+            </button>
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <h3 class="lock-round-label">Other</h3>
       <div class="lock-buttons">
-        <button
-          class="btn-lock"
-          [class.locked]="draftConfig()?.predictionsLocked"
-          (click)="togglePredictionsLock()">
-          {{ draftConfig()?.predictionsLocked ? '🔒' : '🔓' }}
-          Predictions {{ draftConfig()?.predictionsLocked ? 'Locked' : 'Unlocked' }}
-        </button>
         <button
           class="btn-lock"
           [class.locked]="draftConfig()?.connSmytheLocked"

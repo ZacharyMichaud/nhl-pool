@@ -1,0 +1,1 @@
+ALTER TABLE series ADD COLUMN predictions_locked BOOLEAN NOT NULL DEFAULT FALSE;

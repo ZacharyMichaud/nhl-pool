@@ -423,6 +423,20 @@ h3 {
   font-style: italic;
 }
 
+// Lock round labels
+.lock-round-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 14px 0 6px;
+
+  &:first-of-type {
+    margin-top: 4px;
+  }
+}
+
 // Lock buttons
 .lock-buttons {
   display: flex;

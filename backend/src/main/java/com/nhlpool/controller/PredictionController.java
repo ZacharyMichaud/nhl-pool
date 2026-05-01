@@ -67,20 +67,10 @@ public class PredictionController {
         Series series = seriesRepository.findByIdWithRound(seriesId)
                 .orElseThrow(() -> new IllegalArgumentException("Series not found"));
 
-        // Auto-lock: reject if series already started or completed
-        if (series.isCompleted()) {
-            throw new IllegalStateException("This series is already completed");
+        // Per-series lock: reject if admin has locked this specific series
+        if (Boolean.TRUE.equals(series.getPredictionsLocked())) {
+            throw new IllegalStateException("Predictions are locked for this series");
         }
-        if (series.getTopSeedWins() + series.getBottomSeedWins() > 0) {
-            throw new IllegalStateException("Predictions are locked — this series is already in progress");
-        }
-
-        // Admin override: reject if admin has manually locked predictions
-        draftConfigRepository.findAll().stream().findFirst().ifPresent(cfg -> {
-            if (Boolean.TRUE.equals(cfg.getPredictionsLocked())) {
-                throw new IllegalStateException("Predictions are locked by the admin");
-            }
-        });
 
         PoolTeam team = poolTeamRepository.findById(teamId)
                 .orElseThrow(() -> new IllegalArgumentException("Team not found"));
@@ -164,31 +154,17 @@ public class PredictionController {
 
     /**
      * Returns all teams' predictions for a given round.
-     * - When admin has locked predictions: returns ALL predictions (so everyone can compare picks).
-     * - Otherwise: only returns predictions for series that are in-progress or completed
-     *   (picks for new 0-0 series stay hidden until the series starts).
+     * Only returns predictions for series that the admin has locked,
+     * so picks stay hidden until the admin explicitly reveals them.
      */
     @GetMapping("/all-teams/round/{roundNumber}")
     @Transactional(readOnly = true)
     public ResponseEntity<List<Prediction>> getAllTeamsPredictions(@PathVariable Integer roundNumber) {
-        boolean adminLocked = draftConfigRepository.findAll().stream()
-                .findFirst()
-                .map(cfg -> Boolean.TRUE.equals(cfg.getPredictionsLocked()))
-                .orElse(false);
-
         List<Prediction> all = predictionRepository.findByRoundNumber(roundNumber);
 
-        // If admin locked, reveal everything so teams can compare picks
-        if (adminLocked) {
-            return ResponseEntity.ok(all);
-        }
-
-        // Otherwise only reveal predictions whose series has started
+        // Only reveal predictions for series that the admin has locked
         List<Prediction> visible = all.stream()
-                .filter(p -> {
-                    Series s = p.getSeries();
-                    return s.isCompleted() || (s.getTopSeedWins() + s.getBottomSeedWins() > 0);
-                })
+                .filter(p -> Boolean.TRUE.equals(p.getSeries().getPredictionsLocked()))
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(visible);

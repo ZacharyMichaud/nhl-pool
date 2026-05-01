@@ -22,7 +22,6 @@ export class SeriesComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   protected liveGame = inject(LiveGameService);
 
-  predictionsLocked    = signal(false);   // admin override
   selectedRound        = signal(1);
   series               = signal<any[]>([]);
   allTeams             = signal<any[]>([]);
@@ -53,12 +52,10 @@ export class SeriesComponent implements OnInit {
 
   ngOnInit() {
     forkJoin({
-      config:    this.api.getDraftConfig().pipe(catchError(() => of(null))),
       standings: this.api.getStandings().pipe(catchError(() => of([]))),
       rules:     this.api.getPredictionScoringRules().pipe(catchError(() => of([]))),
       rounds:    this.api.getPublicRounds().pipe(catchError(() => of([]))),
-    }).subscribe(({ config, standings, rules, rounds }) => {
-      this.predictionsLocked.set(Boolean(config?.predictionsLocked));
+    }).subscribe(({ standings, rules, rounds }) => {
       this.allTeams.set(standings);
       this.predScoringRules.set(rules);
 
@@ -83,23 +80,14 @@ export class SeriesComponent implements OnInit {
     return 1;
   }
 
-  /**
-   * A series is "open" for predictions when:
-   * - No games have been played (0-0)
-   * - No winner exists
-   * - Admin has NOT manually locked predictions
-   */
+  /** A series is "open" for predictions when the admin hasn't locked it. */
   isSeriesOpen(s: any): boolean {
-    if (this.predictionsLocked()) return false;
-    return !s.winnerAbbrev && s.topSeedWins === 0 && s.bottomSeedWins === 0;
+    return !s.predictionsLocked;
   }
 
-  /**
-   * A series is "locked" when in-progress, completed, or admin has force-locked.
-   * Other teams' picks are visible for locked series.
-   */
-  isSeriesLocked(s: any): boolean {
-    return !this.isSeriesOpen(s);
+  /** Other teams' picks are visible when the series is locked. */
+  isPicksRevealed(s: any): boolean {
+    return !!s.predictionsLocked;
   }
 
   selectRound(round: number) {
