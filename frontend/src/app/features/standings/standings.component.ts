@@ -31,7 +31,7 @@ export class StandingsComponent implements OnInit, OnDestroy {
   standings         = signal<any[]>([]);
   series            = signal<any[]>([]);
   selectedRound     = signal(1);
-  predictionsLocked = signal(false);
+  predictionsLocked = signal(false);   // admin override
   allTeams          = signal<any[]>([]);
   allTeamPredictions = signal<any[]>([]);
   predScoringRules  = signal<any[]>([]);  // PredictionScoringRule[]
@@ -62,13 +62,15 @@ export class StandingsComponent implements OnInit, OnDestroy {
       standings: this.api.getStandings().pipe(catchError(() => of([]))),
       config:    this.api.getDraftConfig().pipe(catchError(() => of(null))),
       rules:     this.api.getPredictionScoringRules().pipe(catchError(() => of([]))),
-    }).subscribe(({ standings, config, rules }) => {
+      rounds:    this.api.getPublicRounds().pipe(catchError(() => of([]))),
+    }).subscribe(({ standings, config, rules, rounds }) => {
       this.standings.set(standings);
       this.allTeams.set(standings);
       this.predScoringRules.set(rules);
-      const locked = Boolean(config?.predictionsLocked);
-      this.predictionsLocked.set(locked);
-      this.loadRound(1, locked);
+      this.predictionsLocked.set(Boolean(config?.predictionsLocked));
+
+      const defaultRound = this.computeDefaultRound(rounds);
+      this.loadRound(defaultRound);
     });
 
     // Reload standings whenever the backend broadcasts a stats update
@@ -80,44 +82,72 @@ export class StandingsComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Returns the round number to show by default: latest ACTIVE, else latest COMPLETED, else 1. */
+  private computeDefaultRound(rounds: any[]): number {
+    if (!rounds || rounds.length === 0) return 1;
+    const active = rounds
+      .filter((r: any) => r.status === 'ACTIVE')
+      .sort((a: any, b: any) => b.roundNumber - a.roundNumber);
+    if (active.length > 0) return active[0].roundNumber;
+
+    const completed = rounds
+      .filter((r: any) => r.status === 'COMPLETED')
+      .sort((a: any, b: any) => b.roundNumber - a.roundNumber);
+    if (completed.length > 0) return completed[0].roundNumber;
+
+    return 1;
+  }
+
   ngOnDestroy() {
     this.statsSub?.unsubscribe();
   }
 
-  selectRound(round: number) {
-    this.selectedRound.set(round);
-    this.loadRound(round, this.predictionsLocked());
+  /**
+   * A series is "open" for predictions when:
+   * - No games have been played (0-0)
+   * - No winner exists
+   * - Admin has NOT manually locked predictions
+   */
+  isSeriesOpen(s: any): boolean {
+    if (this.predictionsLocked()) return false;
+    return !s.winnerAbbrev && s.topSeedWins === 0 && s.bottomSeedWins === 0;
   }
 
-  private loadRound(round: number, locked: boolean) {
+  /**
+   * A series is "locked" when in-progress, completed, or admin has force-locked.
+   * Other teams' picks are visible for locked series.
+   */
+  isSeriesLocked(s: any): boolean {
+    return !this.isSeriesOpen(s);
+  }
+
+  selectRound(round: number) {
     this.selectedRound.set(round);
-    if (locked) {
-      forkJoin({
-        series: this.api.getSeries(round),
-        preds:  this.api.getAllTeamsPredictions(round),
-      }).subscribe(({ series, preds }) => {
-        this.series.set(series);
-        this.allTeamPredictions.set(preds);
-        this.loadSeriesGames(series);
+    this.loadRound(round);
+  }
+
+  private loadRound(round: number) {
+    this.selectedRound.set(round);
+
+    forkJoin({
+      series:     this.api.getSeries(round),
+      savedPreds: this.api.getPredictions(round).pipe(catchError(() => of([]))),
+      allPreds:   this.api.getAllTeamsPredictions(round).pipe(catchError(() => of([]))),
+    }).subscribe(({ series, savedPreds, allPreds }) => {
+      this.series.set(series);
+      this.allTeamPredictions.set(allPreds);
+      this.loadSeriesGames(series);
+
+      const savedMap: Record<number, { winner: string; games: number }> = {};
+      savedPreds.forEach((p: any) => {
+        savedMap[p.series.id] = { winner: p.predictedWinnerAbbrev, games: p.predictedGames };
       });
-    } else {
-      forkJoin({
-        series:     this.api.getSeries(round),
-        savedPreds: this.api.getPredictions(round).pipe(catchError(() => of([]))),
-      }).subscribe(({ series, savedPreds }) => {
-        this.series.set(series);
-        this.loadSeriesGames(series);
-        const savedMap: Record<number, { winner: string; games: number }> = {};
-        savedPreds.forEach((p: any) => {
-          savedMap[p.series.id] = { winner: p.predictedWinnerAbbrev, games: p.predictedGames };
-        });
-        const draft: Record<number, { winner: string; games: number }> = {};
-        series.forEach((s: any) => {
-          draft[s.id] = savedMap[s.id] ?? { winner: '', games: 4 };
-        });
-        this.predictionDraft.set(draft);
+      const draft: Record<number, { winner: string; games: number }> = {};
+      series.forEach((s: any) => {
+        draft[s.id] = savedMap[s.id] ?? { winner: '', games: 4 };
       });
-    }
+      this.predictionDraft.set(draft);
+    });
   }
 
   private loadSeriesGames(seriesList: any[]) {

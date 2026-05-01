@@ -264,6 +264,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     }
   }
 
+
   togglePredictionsLock() {
     this.api.lockPredictions().subscribe({
       next: (cfg: any) => {

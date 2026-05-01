@@ -22,7 +22,7 @@ export class SeriesComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   protected liveGame = inject(LiveGameService);
 
-  predictionsLocked    = signal(false);
+  predictionsLocked    = signal(false);   // admin override
   selectedRound        = signal(1);
   series               = signal<any[]>([]);
   allTeams             = signal<any[]>([]);
@@ -56,52 +56,81 @@ export class SeriesComponent implements OnInit {
       config:    this.api.getDraftConfig().pipe(catchError(() => of(null))),
       standings: this.api.getStandings().pipe(catchError(() => of([]))),
       rules:     this.api.getPredictionScoringRules().pipe(catchError(() => of([]))),
-    }).subscribe(({ config, standings, rules }) => {
-      const locked = Boolean(config?.predictionsLocked);
-      this.predictionsLocked.set(locked);
+      rounds:    this.api.getPublicRounds().pipe(catchError(() => of([]))),
+    }).subscribe(({ config, standings, rules, rounds }) => {
+      this.predictionsLocked.set(Boolean(config?.predictionsLocked));
       this.allTeams.set(standings);
       this.predScoringRules.set(rules);
-      this.loadRound(1, locked);
+
+      const defaultRound = this.computeDefaultRound(rounds);
+      this.loadRound(defaultRound);
     });
+  }
+
+  /** Returns the round number to show by default: latest ACTIVE, else latest COMPLETED, else 1. */
+  private computeDefaultRound(rounds: any[]): number {
+    if (!rounds || rounds.length === 0) return 1;
+    const active = rounds
+      .filter((r: any) => r.status === 'ACTIVE')
+      .sort((a: any, b: any) => b.roundNumber - a.roundNumber);
+    if (active.length > 0) return active[0].roundNumber;
+
+    const completed = rounds
+      .filter((r: any) => r.status === 'COMPLETED')
+      .sort((a: any, b: any) => b.roundNumber - a.roundNumber);
+    if (completed.length > 0) return completed[0].roundNumber;
+
+    return 1;
+  }
+
+  /**
+   * A series is "open" for predictions when:
+   * - No games have been played (0-0)
+   * - No winner exists
+   * - Admin has NOT manually locked predictions
+   */
+  isSeriesOpen(s: any): boolean {
+    if (this.predictionsLocked()) return false;
+    return !s.winnerAbbrev && s.topSeedWins === 0 && s.bottomSeedWins === 0;
+  }
+
+  /**
+   * A series is "locked" when in-progress, completed, or admin has force-locked.
+   * Other teams' picks are visible for locked series.
+   */
+  isSeriesLocked(s: any): boolean {
+    return !this.isSeriesOpen(s);
   }
 
   selectRound(round: number) {
     this.selectedRound.set(round);
-    this.loadRound(round, this.predictionsLocked());
+    this.loadRound(round);
   }
 
-  private loadRound(round: number, locked: boolean) {
+  private loadRound(round: number) {
     this.selectedRound.set(round);
 
-    if (locked) {
-      forkJoin({
-        series: this.api.getSeries(round),
-        preds:  this.api.getAllTeamsPredictions(round),
-      }).subscribe(({ series, preds }) => {
-        this.series.set(series);
-        this.allTeamPredictions.set(preds);
-        this.loadSeriesGames(series);
-      });
-    } else {
-      forkJoin({
-        series:     this.api.getSeries(round),
-        savedPreds: this.api.getPredictions(round).pipe(catchError(() => of([]))),
-      }).subscribe(({ series, savedPreds }) => {
-        this.series.set(series);
-        this.loadSeriesGames(series);
+    forkJoin({
+      series:     this.api.getSeries(round),
+      savedPreds: this.api.getPredictions(round).pipe(catchError(() => of([]))),
+      allPreds:   this.api.getAllTeamsPredictions(round).pipe(catchError(() => of([]))),
+    }).subscribe(({ series, savedPreds, allPreds }) => {
+      this.series.set(series);
+      this.allTeamPredictions.set(allPreds);
+      this.loadSeriesGames(series);
 
-        const savedMap: Record<number, { winner: string; games: number }> = {};
-        savedPreds.forEach((p: any) => {
-          savedMap[p.series.id] = { winner: p.predictedWinnerAbbrev, games: p.predictedGames };
-        });
-
-        const draft: Record<number, { winner: string; games: number }> = {};
-        series.forEach((s: any) => {
-          draft[s.id] = savedMap[s.id] ?? { winner: '', games: 4 };
-        });
-        this.predictionDraft.set(draft);
+      // Build prediction draft from saved predictions
+      const savedMap: Record<number, { winner: string; games: number }> = {};
+      savedPreds.forEach((p: any) => {
+        savedMap[p.series.id] = { winner: p.predictedWinnerAbbrev, games: p.predictedGames };
       });
-    }
+
+      const draft: Record<number, { winner: string; games: number }> = {};
+      series.forEach((s: any) => {
+        draft[s.id] = savedMap[s.id] ?? { winner: '', games: 4 };
+      });
+      this.predictionDraft.set(draft);
+    });
   }
 
   private loadSeriesGames(seriesList: any[]) {
@@ -170,17 +199,21 @@ export class SeriesComponent implements OnInit {
     this.predictionDraft.set({ ...cur, [seriesId]: { ...(cur[seriesId] ?? { winner: '', games: 4 }), games } });
   }
 
+  get hasOpenSeries(): boolean {
+    return this.series().some(s => this.isSeriesOpen(s));
+  }
+
   get hasAnyPrediction(): boolean {
     return this.series().some(s => {
       const pred = this.predictionDraft()[s.id];
-      return !s.winnerAbbrev && pred?.winner;
+      return this.isSeriesOpen(s) && pred?.winner;
     });
   }
 
   saveAll() {
     if (this.saving()) return;
     const calls = this.series()
-      .filter(s => !s.winnerAbbrev && this.predictionDraft()[s.id]?.winner)
+      .filter(s => this.isSeriesOpen(s) && this.predictionDraft()[s.id]?.winner)
       .map(s => {
         const pred = this.predictionDraft()[s.id]!;
         return this.api.submitPrediction(s.id, pred.winner, pred.games);

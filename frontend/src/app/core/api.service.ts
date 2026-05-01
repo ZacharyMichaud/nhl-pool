@@ -97,6 +97,11 @@ export class ApiService {
     return this.http.get<any[]>(`${ API }/predictions/series/${ seriesId }/games`);
   }
 
+  /** Public round statuses — used to determine the current active round. */
+  getPublicRounds(): Observable<any[]> {
+    return this.http.get<any[]>(`${ API }/predictions/rounds`);
+  }
+
   // Admin
   syncRosters(): Observable<any> { return this.http.post(`${ API }/admin/sync/rosters`, {}); }
 

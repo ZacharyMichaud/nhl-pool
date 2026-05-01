@@ -67,18 +67,20 @@ public class PredictionController {
         Series series = seriesRepository.findByIdWithRound(seriesId)
                 .orElseThrow(() -> new IllegalArgumentException("Series not found"));
 
-        // Check if predictions are globally locked by admin
+        // Auto-lock: reject if series already started or completed
+        if (series.isCompleted()) {
+            throw new IllegalStateException("This series is already completed");
+        }
+        if (series.getTopSeedWins() + series.getBottomSeedWins() > 0) {
+            throw new IllegalStateException("Predictions are locked — this series is already in progress");
+        }
+
+        // Admin override: reject if admin has manually locked predictions
         draftConfigRepository.findAll().stream().findFirst().ifPresent(cfg -> {
             if (Boolean.TRUE.equals(cfg.getPredictionsLocked())) {
                 throw new IllegalStateException("Predictions are locked by the admin");
             }
         });
-
-        // Check if round is still accepting predictions (UPCOMING status)
-        PoolRound round = series.getRound();
-        if (round.getStatus() == RoundStatus.COMPLETED) {
-            throw new IllegalStateException("This round is already completed");
-        }
 
         PoolTeam team = poolTeamRepository.findById(teamId)
                 .orElseThrow(() -> new IllegalArgumentException("Team not found"));
@@ -154,22 +156,41 @@ public class PredictionController {
         return ResponseEntity.ok(seriesRepository.findByRoundNumber(roundNumber));
     }
 
+    /** Public read-only view of round statuses so the frontend can default to the active round. */
+    @GetMapping("/rounds")
+    public ResponseEntity<List<PoolRound>> getRounds() {
+        return ResponseEntity.ok(poolRoundRepository.findAll());
+    }
+
     /**
      * Returns all teams' predictions for a given round.
-     * Only reveals data when predictions are locked by an admin.
+     * - When admin has locked predictions: returns ALL predictions (so everyone can compare picks).
+     * - Otherwise: only returns predictions for series that are in-progress or completed
+     *   (picks for new 0-0 series stay hidden until the series starts).
      */
     @GetMapping("/all-teams/round/{roundNumber}")
     @Transactional(readOnly = true)
     public ResponseEntity<List<Prediction>> getAllTeamsPredictions(@PathVariable Integer roundNumber) {
-        boolean locked = draftConfigRepository.findAll().stream()
+        boolean adminLocked = draftConfigRepository.findAll().stream()
                 .findFirst()
                 .map(cfg -> Boolean.TRUE.equals(cfg.getPredictionsLocked()))
                 .orElse(false);
 
-        if (!locked) {
-            return ResponseEntity.ok(List.of());
+        List<Prediction> all = predictionRepository.findByRoundNumber(roundNumber);
+
+        // If admin locked, reveal everything so teams can compare picks
+        if (adminLocked) {
+            return ResponseEntity.ok(all);
         }
 
-        return ResponseEntity.ok(predictionRepository.findByRoundNumber(roundNumber));
+        // Otherwise only reveal predictions whose series has started
+        List<Prediction> visible = all.stream()
+                .filter(p -> {
+                    Series s = p.getSeries();
+                    return s.isCompleted() || (s.getTopSeedWins() + s.getBottomSeedWins() > 0);
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(visible);
     }
 }

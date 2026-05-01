@@ -97,7 +97,7 @@
       </ng-container>
 
       <!-- Pick-result strip: compact summary shown when series is done + locked -->
-      <ng-container *ngIf="s.winnerAbbrev && predictionsLocked()">
+      <ng-container *ngIf="s.winnerAbbrev && isSeriesLocked(s)">
         <div class="pick-result-strip">
           <div *ngFor="let entry of getAllPredsForSeries(s.id)"
             class="strip-entry"
@@ -129,7 +129,7 @@
       <div class="card-divider"></div>
 
       <!-- LOCKED: predictions comparison table -->
-      <ng-container *ngIf="predictionsLocked(); else entryForm">
+      <ng-container *ngIf="isSeriesLocked(s); else entryForm">
         <div class="picks-list">
           <div *ngFor="let entry of getAllPredsForSeries(s.id)"
             class="pick-row"
@@ -158,7 +158,7 @@
 
       <!-- UNLOCKED: entry form -->
       <ng-template #entryForm>
-        <ng-container *ngIf="!s.winnerAbbrev; else seriesDone">
+        <ng-container *ngIf="isSeriesOpen(s); else seriesDone">
           <div class="entry-form">
             <div class="entry-field">
               <label class="entry-label">Pick Winner</label>
@@ -205,8 +205,8 @@
 
 </div><!-- end page-container -->
 
-<!-- Save bar — only when unlocked and series exist -->
-<div class="save-bar" *ngIf="!predictionsLocked() && series().length > 0">
+<!-- Save bar — only when there are open series to predict on -->
+<div class="save-bar" *ngIf="hasOpenSeries">
   <button class="btn-save"
     id="series-save-btn"
     (click)="saveAll()"
