@@ -2,9 +2,9 @@ spring:
   jackson:
     time-zone: America/New_York
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/nhlpool}
-    username: ${DB_USER:nhlpool}
-    password: ${DB_PASSWORD:nhlpool}
+    url: ${DATABASE_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
