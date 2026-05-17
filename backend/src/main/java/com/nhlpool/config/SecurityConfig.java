@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/health").permitAll()               // UptimeRobot keep-alive
                         .requestMatchers("/ws/**").permitAll()         // SockJS WebSocket handshake
                         .requestMatchers("/ws-native/**").permitAll()  // Native WebSocket handshake
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/*.js", "/*.css", "/*.ico", "/*.woff2").permitAll()
