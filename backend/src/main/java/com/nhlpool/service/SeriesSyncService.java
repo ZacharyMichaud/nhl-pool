@@ -2,6 +2,7 @@ package com.nhlpool.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.nhlpool.domain.PoolRound;
+import com.nhlpool.domain.RoundStatus;
 import com.nhlpool.domain.Series;
 import com.nhlpool.repository.PoolRoundRepository;
 import com.nhlpool.repository.SeriesRepository;
@@ -89,8 +90,31 @@ public class SeriesSyncService {
 
                 seriesRepository.save(series);
             });
+
+            // Auto-recompute round status from the series we just synced
+            recomputeRoundStatus(poolRound);
         });
 
         log.info("Series sync complete");
+    }
+
+    /**
+     * Derives and persists the PoolRound status based on its current series data.
+     *
+     * Rules:
+     *  - UPCOMING  → no confirmed series exist in this round yet
+     *  - ACTIVE    → at least one series is still in progress (no winner)
+     *  - COMPLETED → every series in this round has a winner
+     */
+    private void recomputeRoundStatus(PoolRound round) {
+        List<Series> seriesInRound = seriesRepository.findByRoundNumber(round.getRoundNumber());
+        if (seriesInRound.isEmpty()) {
+            round.setStatus(RoundStatus.UPCOMING);
+        } else {
+            boolean anyIncomplete = seriesInRound.stream().anyMatch(s -> s.getWinnerAbbrev() == null);
+            round.setStatus(anyIncomplete ? RoundStatus.ACTIVE : RoundStatus.COMPLETED);
+        }
+        poolRoundRepository.save(round);
+        log.info("Round {} status auto-set to {}", round.getRoundNumber(), round.getStatus());
     }
 }

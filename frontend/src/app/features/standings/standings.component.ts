@@ -9,14 +9,20 @@ import { LiveGameService } from '../../core/live-game.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
 import { PoolBadgeComponent } from '../../shared/components/pool-badge/pool-badge.component';
+import { SeriesCardListComponent } from '../../shared/components/series-card-list/series-card-list.component';
 
-// NHL API assigns series letters — flip if Western shows on the right
-const WEST_CODES = new Set(['E', 'F', 'G', 'H']);
+// Map of NHL team abbreviations to their conference.
+// Series letter codes change every round (A-H in R1, I-L in R2, M-N in CF),
+// so we derive the conference from the topSeed team instead.
+const WESTERN_TEAMS = new Set([
+  'ANA', 'ARI', 'CGY', 'CHI', 'COL', 'DAL', 'EDM', 'LAK',
+  'MIN', 'NSH', 'SJS', 'SEA', 'STL', 'UTA', 'VAN', 'VGK', 'WPG',
+]);
 
 @Component({
   selector: 'app-standings',
   standalone: true,
-  imports: [CommonModule, DropdownComponent, PoolBadgeComponent],
+  imports: [CommonModule, DropdownComponent, PoolBadgeComponent, SeriesCardListComponent],
   templateUrl: './standings.component.html',
   styleUrl: './standings.component.scss',
 })
@@ -52,21 +58,66 @@ export class StandingsComponent implements OnInit, OnDestroy {
     { value: 7, label: '7 Games' },
   ];
 
-  westSeries = computed(() => this.series().filter(s => WEST_CODES.has(s.seriesCode?.toUpperCase())));
-  eastSeries = computed(() => this.series().filter(s => !WEST_CODES.has(s.seriesCode?.toUpperCase())));
+  // ── Conference split (raw) ────────────────────────────────────────────────
+  private _westSeries = computed(() => this.series().filter((s: any) =>
+    WESTERN_TEAMS.has(s.topSeedAbbrev?.toUpperCase()) || WESTERN_TEAMS.has(s.bottomSeedAbbrev?.toUpperCase())
+  ));
+  private _eastSeries = computed(() => this.series().filter((s: any) =>
+    !WESTERN_TEAMS.has(s.topSeedAbbrev?.toUpperCase()) && !WESTERN_TEAMS.has(s.bottomSeedAbbrev?.toUpperCase())
+  ));
+
+  // ── Sort helpers ──────────────────────────────────────────────────────────
+  private getMostRecentGameDate(seriesId: number): string | null {
+    const played = (this.seriesGames()[seriesId] ?? [])
+      .filter((g: any) => g.gameState !== 'PRE' && g.gameState !== 'FUT')
+      .map((g: any) => g.gameDate as string)
+      .filter(Boolean)
+      .sort();
+    return played.length > 0 ? played[played.length - 1] : null;
+  }
+
+  private hasLiveGame(seriesId: number): boolean {
+    return (this.seriesGames()[seriesId] ?? []).some(
+      (g: any) => g.gameState === 'LIVE' || g.gameState === 'CRIT'
+    );
+  }
+
+  private sortSeriesList(list: any[]): any[] {
+    return [...list].sort((a: any, b: any) => {
+      const aOngoing = !a.winnerAbbrev;
+      const bOngoing = !b.winnerAbbrev;
+      if (aOngoing !== bOngoing) return aOngoing ? -1 : 1;
+      if (aOngoing) {
+        const aLive = this.hasLiveGame(a.id);
+        const bLive = this.hasLiveGame(b.id);
+        if (aLive !== bLive) return aLive ? -1 : 1;
+        const aDate = this.getMostRecentGameDate(a.id) ?? '';
+        const bDate = this.getMostRecentGameDate(b.id) ?? '';
+        return bDate.localeCompare(aDate);
+      }
+      const aDate = this.getMostRecentGameDate(a.id) ?? '';
+      const bDate = this.getMostRecentGameDate(b.id) ?? '';
+      return bDate.localeCompare(aDate);
+    });
+  }
+
+  // Sorted conference lists exposed to the template
+  westSeries = computed(() => this.sortSeriesList(this._westSeries()));
+  eastSeries = computed(() => this.sortSeriesList(this._eastSeries()));
 
   ngOnInit() {
     this.draftEvent.connect();
     forkJoin({
-      standings: this.api.getStandings().pipe(catchError(() => of([]))),
-      rules:     this.api.getPredictionScoringRules().pipe(catchError(() => of([]))),
-      rounds:    this.api.getPublicRounds().pipe(catchError(() => of([]))),
-    }).subscribe(({ standings, rules, rounds }) => {
+      standings:  this.api.getStandings().pipe(catchError(() => of([]))),
+      rules:      this.api.getPredictionScoringRules().pipe(catchError(() => of([]))),
+      rounds:     this.api.getPublicRounds().pipe(catchError(() => of([]))),
+      allSeries:  this.api.getAllSeries().pipe(catchError(() => of([]))),
+    }).subscribe(({ standings, rules, rounds, allSeries }) => {
       this.standings.set(standings);
       this.allTeams.set(standings);
       this.predScoringRules.set(rules);
 
-      const defaultRound = this.computeDefaultRound(rounds);
+      const defaultRound = this.computeDefaultRound(rounds, allSeries);
       this.loadRound(defaultRound);
     });
 
@@ -79,18 +130,38 @@ export class StandingsComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Returns the round number to show by default: latest ACTIVE, else latest COMPLETED, else 1. */
-  private computeDefaultRound(rounds: any[]): number {
-    if (!rounds || rounds.length === 0) return 1;
-    const active = rounds
-      .filter((r: any) => r.status === 'ACTIVE')
-      .sort((a: any, b: any) => b.roundNumber - a.roundNumber);
-    if (active.length > 0) return active[0].roundNumber;
+  /**
+   * Returns the round number to default to.
+   *
+   * Priority:
+   *  1. Lowest round with at least one incomplete series (no winner yet) — driven by real game data.
+   *     Math.min ensures round 2 (G7 tomorrow) beats round 3 (confirmed but not started).
+   *  2. Highest round whose PoolRound.status is ACTIVE.
+   *  3. Highest round whose PoolRound.status is COMPLETED.
+   *  4. 1 (safe fallback).
+   */
+  private computeDefaultRound(rounds: any[], allSeries: any[]): number {
+    if (allSeries && allSeries.length > 0) {
+      const incompleteRounds = allSeries
+        .filter((s: any) => !s.winnerAbbrev)
+        .map((s: any) => s.round?.roundNumber as number)
+        .filter((rn: number) => !!rn);
+      if (incompleteRounds.length > 0) {
+        return Math.min(...incompleteRounds);
+      }
+    }
 
-    const completed = rounds
-      .filter((r: any) => r.status === 'COMPLETED')
-      .sort((a: any, b: any) => b.roundNumber - a.roundNumber);
-    if (completed.length > 0) return completed[0].roundNumber;
+    if (rounds && rounds.length > 0) {
+      const active = rounds
+        .filter((r: any) => r.status === 'ACTIVE')
+        .sort((a: any, b: any) => b.roundNumber - a.roundNumber);
+      if (active.length > 0) return active[0].roundNumber;
+
+      const completed = rounds
+        .filter((r: any) => r.status === 'COMPLETED')
+        .sort((a: any, b: any) => b.roundNumber - a.roundNumber);
+      if (completed.length > 0) return completed[0].roundNumber;
+    }
 
     return 1;
   }
@@ -194,6 +265,15 @@ export class StandingsComponent implements OnInit, OnDestroy {
     return `${game.periodNumber}P`;
   }
 
+  /** Returns the abbreviation of the game winner for a completed game, null otherwise. */
+  getGameWinnerAbbrev(game: any): string | null {
+    const finished = game.gameState !== 'PRE' && game.gameState !== 'FUT'
+                  && game.gameState !== 'LIVE' && game.gameState !== 'CRIT';
+    if (!finished) return null;
+    if (game.homeScore == null || game.awayScore == null) return null;
+    return game.homeScore > game.awayScore ? game.homeAbbrev : game.awayAbbrev;
+  }
+
   isMyTeam(teamId: number): boolean {
     return this.auth.teamId() === teamId;
   }
@@ -210,14 +290,14 @@ export class StandingsComponent implements OnInit, OnDestroy {
     ];
   }
 
-  onWinnerChange(seriesId: number, winner: string) {
+  onWinnerChange(event: { seriesId: number; winner: string }) {
     const cur = this.predictionDraft();
-    this.predictionDraft.set({ ...cur, [seriesId]: { ...(cur[seriesId] ?? { winner: '', games: 4 }), winner } });
+    this.predictionDraft.set({ ...cur, [event.seriesId]: { ...(cur[event.seriesId] ?? { winner: '', games: 4 }), winner: event.winner } });
   }
 
-  onGamesChange(seriesId: number, games: number) {
+  onGamesChange(event: { seriesId: number; games: number }) {
     const cur = this.predictionDraft();
-    this.predictionDraft.set({ ...cur, [seriesId]: { ...(cur[seriesId] ?? { winner: '', games: 4 }), games } });
+    this.predictionDraft.set({ ...cur, [event.seriesId]: { ...(cur[event.seriesId] ?? { winner: '', games: 4 }), games: event.games } });
   }
 
   getAllPredsForSeries(seriesId: number): { teamId: number; teamName: string; pred: any }[] {

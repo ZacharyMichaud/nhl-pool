@@ -143,10 +143,6 @@ export class ApiService {
 
   getRounds(): Observable<any[]> { return this.http.get<any[]>(`${ API }/admin/rounds`); }
 
-  updateRoundStatus(id: number, status: string): Observable<any> {
-    return this.http.put(`${ API }/admin/rounds/${ id }/status`, { status });
-  }
-
   getBracket(): Observable<any> { return this.http.get(`${ API }/admin/bracket`); }
 
   startDraft(): Observable<any> { return this.http.post(`${ API }/draft/start`, {}); }

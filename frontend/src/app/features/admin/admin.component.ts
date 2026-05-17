@@ -52,13 +52,9 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.users().map(u => ({ value: u.id, label: `${u.displayName} (${u.username})` }))
   );
 
-  readonly roundStatusOptions: DropdownOption[] = [
-    { value: 'UPCOMING',  label: 'Upcoming' },
-    { value: 'ACTIVE',    label: 'Active' },
-    { value: 'COMPLETED', label: 'Completed' },
-  ];
 
   // ─────────────────────────────────────────────────────────────────────────────
+
 
   ngOnInit() {
     this.loadAll();
@@ -219,17 +215,6 @@ export class AdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  updateRound(r: any) {
-    this.api.updateRoundStatus(r.id, r.status).subscribe({
-      next: () => this.show('Round updated'),
-      error: (e) => this.show(e.error?.error || 'Failed'),
-    });
-  }
-
-  onRoundStatusChange(r: any, val: string) {
-    r.status = val;
-    this.updateRound(r);
-  }
 
   updateScoringRule(rule: any) {
     this.api.updateScoringRule(rule.id, { pointValue: rule.pointValue, enabled: rule.enabled }).subscribe({

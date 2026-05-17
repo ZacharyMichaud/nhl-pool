@@ -174,9 +174,8 @@
   border-top: 1px solid var(--border);
 }
 
-// ── Game rows ─────────────────────────────────────────────────────────────────
-// 1fr auto 1fr grid: both flanking columns get equal space so the score
-// (auto column) is ALWAYS geometrically centered, regardless of content.
+// ── Game rows (1fr auto 1fr grid: score always geometrically centered) ────────
+// Columns: [left meta | score (auto) | OT/live+winner (1fr)]
 .game-row {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -298,6 +297,31 @@
 @keyframes dot-pulse-red {
   0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
   50%       { opacity: 0.6; box-shadow: 0 0 0 3px rgba(239,68,68,0); }
+}
+
+// ── Winner badge (inside .game-live-info, pushed to the right) ─────────────────
+.game-winner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;   // pushes badge to far right of the col-3 flex container
+  padding-left: 6px;
+}
+
+.game-winner-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.game-winner-abbrev {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 
 // ── Pick-result strip (compact, shown below score on finished series) ─────────
@@ -470,7 +494,7 @@
 
 .pick-row {
   display: grid;
-  grid-template-columns: minmax(80px, 1fr) 64px 34px 24px;
+  grid-template-columns: minmax(80px, 1fr) 64px 34px 32px;
   align-items: center;
   padding: 7px 14px;
   font-size: 12px;
@@ -512,18 +536,25 @@
   font-size: 11px;
   color: var(--text-secondary);
   text-align: center;
+
+  // Gold highlight: only when correct winner + correct games count
+  &.games-exact {
+    color: #fbbf24;
+    font-weight: 800;
+  }
 }
 
-.pick-result {
+// Points badge — replaces ✓/✗ in the last column
+.pick-pts {
+  font-size: 11px;
+  font-weight: 800;
   text-align: center;
-  &.muted { color: var(--text-muted); font-size: 11px; }
-}
+  border-radius: 5px;
+  padding: 2px 4px;
 
-.mark {
-  font-size: 13px;
-  font-weight: 700;
-  &.correct-mark { color: #4ade80; }
-  &.wrong-mark   { color: var(--danger); }
+  &.pts-earned { color: #4ade80; background: rgba(74, 222, 128, 0.12); }
+  &.pts-zero   { color: var(--text-muted); font-weight: 600; }
+  &.pts-none   { color: var(--text-muted); font-weight: 400; }
 }
 
 // ── Entry form ─────────────────────────────────────────────────────────────────

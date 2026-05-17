@@ -1,0 +1,207 @@
+<ng-container *ngFor="let s of sortedSeries()">
+  <div class="series-card card">
+
+    <!-- Status bar: only shown when series has a winner -->
+    <div class="series-status complete" *ngIf="s.winnerAbbrev">
+      🏆 {{ s.winnerAbbrev }} wins in {{ s.topSeedWins + s.bottomSeedWins }} games
+    </div>
+
+    <!-- Matchup scores -->
+    <div class="matchup">
+      <div class="team-side"
+        [class.winner]="s.winnerAbbrev === s.topSeedAbbrev"
+        [class.loser]="s.winnerAbbrev && s.winnerAbbrev !== s.topSeedAbbrev">
+        <span class="team-abbrev">{{ s.topSeedAbbrev }}</span>
+        <img [src]="s.topSeedLogoUrl" class="team-logo" onerror="this.style.display='none'">
+      </div>
+      <div class="score-block">
+        <div class="score-row">
+          <span class="score">{{ s.topSeedWins }}</span>
+          <span class="score-sep">–</span>
+          <span class="score">{{ s.bottomSeedWins }}</span>
+        </div>
+        <span class="live-indicator"
+          *ngIf="!s.winnerAbbrev && (liveGame.isLive(s.topSeedAbbrev) || liveGame.isLive(s.bottomSeedAbbrev))">
+          LIVE
+        </span>
+      </div>
+      <div class="team-side right"
+        [class.winner]="s.winnerAbbrev === s.bottomSeedAbbrev"
+        [class.loser]="s.winnerAbbrev && s.winnerAbbrev !== s.bottomSeedAbbrev">
+        <span class="team-abbrev">{{ s.bottomSeedAbbrev }}</span>
+        <img [src]="s.bottomSeedLogoUrl" class="team-logo" onerror="this.style.display='none'">
+      </div>
+    </div>
+
+    <!-- Game-by-game history -->
+    <ng-container *ngIf="getGamesForSeries(s.id).length > 0">
+      <div class="game-history">
+
+        <!-- Next game (upcoming, shown dimmed) -->
+        <div *ngIf="!s.winnerAbbrev && getNextGame(s.id) as ng"
+          class="game-row game-pre">
+          <span class="game-meta">
+            <span class="game-num">G{{ ng.gameNumber }}</span>
+            <span class="game-date">{{ formatGameDate(ng.gameDate) }}</span>
+            <span class="game-venue">&#64;{{ ng.homeAbbrev }}</span>
+          </span>
+          <span class="game-score">
+            <span class="gscore-num">–</span>
+            <span class="gscore-dash">–</span>
+            <span class="gscore-num">–</span>
+          </span>
+          <span class="game-live-info"></span>
+        </div>
+
+        <!-- Played / live games (newest first) -->
+        <div *ngFor="let g of getPlayedGames(s.id).slice().reverse()"
+          class="game-row"
+          [class.game-live]="g.gameState === 'LIVE' || g.gameState === 'CRIT'">
+
+          <!-- col 1: G# · date · @venue -->
+          <span class="game-meta">
+            <span class="game-num">G{{ g.gameNumber }}</span>
+            <span class="game-date">{{ formatGameDate(g.gameDate) }}</span>
+            <span class="game-venue">&#64;{{ g.homeAbbrev }}</span>
+          </span>
+
+          <!-- col 2: score digits + dash -->
+          <span class="game-score">
+            <span class="gscore-num">{{ getAlignedGameScore(g, s)[0] }}</span>
+            <span class="gscore-dash">–</span>
+            <span class="gscore-num">{{ getAlignedGameScore(g, s)[1] }}</span>
+          </span>
+
+          <!-- col 3: OT/live info + winner badge -->
+          <span class="game-live-info">
+            <span class="game-live-period" *ngIf="g.gameState === 'LIVE' || g.gameState === 'CRIT'">
+              <span>{{ getLivePeriodLabel(g) }}</span>
+              <span>{{ g.periodTimeRemaining }}</span>
+              <span class="game-live-dot"></span>
+            </span>
+            <span class="gscore-suffix" *ngIf="g.gameState !== 'LIVE' && g.gameState !== 'CRIT' && getGameSuffix(g)">{{ getGameSuffix(g) }}</span>
+            <span class="game-winner-badge" *ngIf="getGameWinnerAbbrev(g) as winnerAbbrev">
+              <img [src]="getLogoForAbbrev(s, winnerAbbrev)" class="game-winner-logo" onerror="this.style.display='none'">
+              <span class="game-winner-abbrev">{{ winnerAbbrev }}</span>
+            </span>
+          </span>
+
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Pick-result strip: compact summary shown when series is done + locked -->
+    <ng-container *ngIf="s.winnerAbbrev && isPicksRevealed(s)">
+      <div class="pick-result-strip">
+        <div *ngFor="let entry of getAllPredsForSeries(s.id)"
+          class="strip-entry"
+          [class.strip-correct]="entry.pred && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
+          [class.strip-wrong]="entry.pred && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev"
+          [class.strip-no-pick]="!entry.pred">
+          <app-pool-badge [name]="entry.teamName" [colorIndex]="teamColorIndex(entry.teamId)"></app-pool-badge>
+          <ng-container *ngIf="entry.pred; else noPredMark">
+            <span *ngIf="entry.pred.predictedWinnerAbbrev === s.winnerAbbrev" class="mark-correct">✓</span>
+            <span *ngIf="entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev" class="mark-wrong">✗</span>
+            <span class="strip-games"
+              [class.strip-games-exact]="entry.pred.predictedGames === (s.topSeedWins + s.bottomSeedWins)">
+              {{ entry.pred.predictedGames }}G
+            </span>
+            <ng-container *ngIf="getSeriesPoints(s, entry.pred) as pts">
+              <span class="strip-pts"
+                [class.strip-pts-win]="pts.total > 0"
+                [class.strip-pts-bonus]="pts.gamesPts > 0"
+                [class.strip-pts-zero]="pts.total === 0">
+                +{{ pts.total }}
+              </span>
+            </ng-container>
+          </ng-container>
+          <ng-template #noPredMark><span class="strip-no-pred">—</span></ng-template>
+        </div>
+      </div>
+    </ng-container>
+
+    <div class="card-divider"></div>
+
+    <!-- LOCKED: predictions comparison table -->
+    <ng-container *ngIf="isPicksRevealed(s); else entryForm">
+      <div class="picks-list">
+        <div *ngFor="let entry of getAllPredsForSeries(s.id)"
+          class="pick-row"
+          [class.my-row]="isMyTeam(entry.teamId)"
+          [class.correct]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
+          [class.wrong]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">
+          <app-pool-badge [name]="entry.teamName" [colorIndex]="teamColorIndex(entry.teamId)"></app-pool-badge>
+
+          <!-- Winner pick -->
+          <span class="pick-winner" *ngIf="entry.pred">
+            <img *ngIf="getLogoForAbbrev(s, entry.pred.predictedWinnerAbbrev)"
+              [src]="getLogoForAbbrev(s, entry.pred.predictedWinnerAbbrev)"
+              class="pick-winner-logo"
+              onerror="this.style.display='none'">
+            {{ entry.pred.predictedWinnerAbbrev }}
+          </span>
+          <span class="pick-winner no-pick" *ngIf="!entry.pred">—</span>
+
+          <!-- Games: gold highlight only when correct winner + correct games -->
+          <span class="pick-games"
+            *ngIf="entry.pred"
+            [class.games-exact]="entry.pred.predictedWinnerAbbrev === s.winnerAbbrev
+                                 && entry.pred.predictedGames === (s.topSeedWins + s.bottomSeedWins)">
+            {{ entry.pred.predictedGames }}G
+          </span>
+          <span class="pick-games" *ngIf="!entry.pred">—</span>
+
+          <!-- Points earned -->
+          <ng-container *ngIf="s.winnerAbbrev && entry.pred; else noPoints">
+            <ng-container *ngIf="getSeriesPoints(s, entry.pred) as pts">
+              <span class="pick-pts"
+                [class.pts-earned]="pts.total > 0"
+                [class.pts-zero]="pts.total === 0">
+                {{ pts.total }}
+              </span>
+            </ng-container>
+          </ng-container>
+          <ng-template #noPoints><span class="pick-pts pts-none">—</span></ng-template>
+
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- UNLOCKED: entry form -->
+    <ng-template #entryForm>
+      <ng-container *ngIf="isSeriesOpen(s); else seriesDone">
+        <div class="entry-form">
+          <div class="entry-field">
+            <label class="entry-label">Pick Winner</label>
+            <app-dropdown
+              [options]="getWinnerOptions(s)"
+              [value]="getPredForSeries(s.id)?.winner"
+              (valueChange)="onWinnerChange(s.id, $event)"
+              placeholder="Choose team…">
+            </app-dropdown>
+          </div>
+          <div class="entry-field">
+            <label class="entry-label">In</label>
+            <app-dropdown
+              [options]="gameOptions"
+              [value]="getPredForSeries(s.id)?.games"
+              (valueChange)="onGamesChange(s.id, $event)"
+              placeholder="# games">
+            </app-dropdown>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-template #seriesDone>
+        <div class="your-pick" *ngIf="getPredForSeries(s.id)?.winner; else noPick">
+          <span class="pick-label">Your pick</span>
+          <span class="pick-val">{{ getPredForSeries(s.id)?.winner }} in {{ getPredForSeries(s.id)?.games }}G</span>
+        </div>
+        <ng-template #noPick>
+          <p class="no-pick-msg">No prediction made</p>
+        </ng-template>
+      </ng-template>
+    </ng-template>
+
+  </div><!-- end series-card -->
+</ng-container>

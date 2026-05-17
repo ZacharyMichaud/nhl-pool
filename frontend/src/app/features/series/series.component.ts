@@ -3,29 +3,27 @@ import { CommonModule } from '@angular/common';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { catchError, forkJoin, of } from 'rxjs';
 import { ApiService } from '../../core/api.service';
-import { AuthService } from '../../core/auth.service';
-import { LiveGameService } from '../../core/live-game.service';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
-import { PoolBadgeComponent } from '../../shared/components/pool-badge/pool-badge.component';
+import { SeriesCardListComponent } from '../../shared/components/series-card-list/series-card-list.component';
 
 @Component({
   selector: 'app-series',
   standalone: true,
-  imports: [CommonModule, MatSnackBarModule, DropdownComponent, PoolBadgeComponent],
+  imports: [CommonModule, MatSnackBarModule, DropdownComponent, SeriesCardListComponent],
   templateUrl: './series.component.html',
   styleUrl: './series.component.scss',
 })
 export class SeriesComponent implements OnInit {
   private api      = inject(ApiService);
-  private auth     = inject(AuthService);
   private snackBar = inject(MatSnackBar);
-  protected liveGame = inject(LiveGameService);
 
   selectedRound        = signal(1);
   series               = signal<any[]>([]);
   allTeams             = signal<any[]>([]);
   predictionDraft      = signal<Record<number, { winner: string; games: number } | undefined>>({});
+  /** Snapshot of predictions as last loaded / saved — used to detect unsaved changes. */
+  savedDraft           = signal<Record<number, { winner: string; games: number } | undefined>>({});
   saving               = signal(false);
   allTeamPredictions   = signal<any[]>([]);
   predScoringRules     = signal<any[]>([]);
@@ -43,51 +41,54 @@ export class SeriesComponent implements OnInit {
     label: r.label,
   }));
 
-  readonly gameOptions: DropdownOption[] = [
-    { value: 4, label: '4 Games' },
-    { value: 5, label: '5 Games' },
-    { value: 6, label: '6 Games' },
-    { value: 7, label: '7 Games' },
-  ];
-
   ngOnInit() {
     forkJoin({
-      standings: this.api.getStandings().pipe(catchError(() => of([]))),
-      rules:     this.api.getPredictionScoringRules().pipe(catchError(() => of([]))),
-      rounds:    this.api.getPublicRounds().pipe(catchError(() => of([]))),
-    }).subscribe(({ standings, rules, rounds }) => {
+      standings:  this.api.getStandings().pipe(catchError(() => of([]))),
+      rules:      this.api.getPredictionScoringRules().pipe(catchError(() => of([]))),
+      rounds:     this.api.getPublicRounds().pipe(catchError(() => of([]))),
+      allSeries:  this.api.getAllSeries().pipe(catchError(() => of([]))),
+    }).subscribe(({ standings, rules, rounds, allSeries }) => {
       this.allTeams.set(standings);
       this.predScoringRules.set(rules);
 
-      const defaultRound = this.computeDefaultRound(rounds);
+      const defaultRound = this.computeDefaultRound(rounds, allSeries);
       this.loadRound(defaultRound);
     });
   }
 
-  /** Returns the round number to show by default: latest ACTIVE, else latest COMPLETED, else 1. */
-  private computeDefaultRound(rounds: any[]): number {
-    if (!rounds || rounds.length === 0) return 1;
-    const active = rounds
-      .filter((r: any) => r.status === 'ACTIVE')
-      .sort((a: any, b: any) => b.roundNumber - a.roundNumber);
-    if (active.length > 0) return active[0].roundNumber;
+  /**
+   * Returns the round number to default to.
+   *
+   * Priority:
+   *  1. Highest round that has at least one active (incomplete) series — winner not yet decided.
+   *  2. Highest round whose PoolRound.status is ACTIVE.
+   *  3. Highest round whose PoolRound.status is COMPLETED.
+   *  4. 1 (safe fallback).
+   */
+  private computeDefaultRound(rounds: any[], allSeries: any[]): number {
+    if (allSeries && allSeries.length > 0) {
+      const incompleteRounds = allSeries
+        .filter((s: any) => !s.winnerAbbrev)
+        .map((s: any) => s.round?.roundNumber as number)
+        .filter((rn: number) => !!rn);
+      if (incompleteRounds.length > 0) {
+        return Math.min(...incompleteRounds);
+      }
+    }
 
-    const completed = rounds
-      .filter((r: any) => r.status === 'COMPLETED')
-      .sort((a: any, b: any) => b.roundNumber - a.roundNumber);
-    if (completed.length > 0) return completed[0].roundNumber;
+    if (rounds && rounds.length > 0) {
+      const active = rounds
+        .filter((r: any) => r.status === 'ACTIVE')
+        .sort((a: any, b: any) => b.roundNumber - a.roundNumber);
+      if (active.length > 0) return active[0].roundNumber;
+
+      const completed = rounds
+        .filter((r: any) => r.status === 'COMPLETED')
+        .sort((a: any, b: any) => b.roundNumber - a.roundNumber);
+      if (completed.length > 0) return completed[0].roundNumber;
+    }
 
     return 1;
-  }
-
-  /** A series is "open" for predictions when the admin hasn't locked it. */
-  isSeriesOpen(s: any): boolean {
-    return !s.predictionsLocked;
-  }
-
-  /** Other teams' picks are visible when the series is locked. */
-  isPicksRevealed(s: any): boolean {
-    return !!s.predictionsLocked;
   }
 
   selectRound(round: number) {
@@ -107,7 +108,6 @@ export class SeriesComponent implements OnInit {
       this.allTeamPredictions.set(allPreds);
       this.loadSeriesGames(series);
 
-      // Build prediction draft from saved predictions
       const savedMap: Record<number, { winner: string; games: number }> = {};
       savedPreds.forEach((p: any) => {
         savedMap[p.series.id] = { winner: p.predictedWinnerAbbrev, games: p.predictedGames };
@@ -118,6 +118,7 @@ export class SeriesComponent implements OnInit {
         draft[s.id] = savedMap[s.id] ?? { winner: '', games: 4 };
       });
       this.predictionDraft.set(draft);
+      this.savedDraft.set(JSON.parse(JSON.stringify(draft)));
     });
   }
 
@@ -129,81 +130,46 @@ export class SeriesComponent implements OnInit {
     });
   }
 
-  getGamesForSeries(seriesId: number): any[] {
-    return this.seriesGames()[seriesId] ?? [];
-  }
+  // ── Prediction draft mutations (delegated from child) ──────────────────────
 
-  getNextGame(seriesId: number): any | null {
-    const upcoming = (this.seriesGames()[seriesId] ?? [])
-      .filter((g: any) => g.gameState === 'PRE' || g.gameState === 'FUT')
-      .sort((a: any, b: any) => a.gameNumber - b.gameNumber);
-    return upcoming[0] ?? null;
-  }
-
-  getPlayedGames(seriesId: number): any[] {
-    return (this.seriesGames()[seriesId] ?? [])
-      .filter((g: any) => g.gameState !== 'PRE' && g.gameState !== 'FUT');
-  }
-
-  formatGameDate(dateStr: string): string {
-    if (!dateStr) return '';
-    const [, m, d] = dateStr.split('-');
-    return `${d}/${m}`;
-  }
-
-  getAlignedGameScore(game: any, series: any): [number, number] {
-    const homeIsTop = game.homeAbbrev === series.topSeedAbbrev;
-    return homeIsTop ? [game.homeScore, game.awayScore] : [game.awayScore, game.homeScore];
-  }
-
-  getGameSuffix(game: any): string {
-    if (game.gameState === 'LIVE' || game.gameState === 'CRIT') return '';
-    if (game.periodType === 'OT') return 'OT';
-    if (game.periodType === 'SO') return 'SO';
-    return '';
-  }
-
-  getLivePeriodLabel(game: any): string {
-    if (game.periodType === 'OT') return 'OT';
-    if (game.periodType === 'SO') return 'SO';
-    return `${game.periodNumber}P`;
-  }
-
-  // ── Entry form helpers ─────────────────────────────────────────────────────
-  getWinnerOptions(s: any): DropdownOption[] {
-    return [
-      { value: s.topSeedAbbrev,    label: s.topSeedAbbrev },
-      { value: s.bottomSeedAbbrev, label: s.bottomSeedAbbrev },
-    ];
-  }
-
-  onWinnerChange(seriesId: number, winner: string) {
+  onWinnerChange(event: { seriesId: number; winner: string }) {
     const cur = this.predictionDraft();
-    this.predictionDraft.set({ ...cur, [seriesId]: { ...(cur[seriesId] ?? { winner: '', games: 4 }), winner } });
+    this.predictionDraft.set({
+      ...cur,
+      [event.seriesId]: { ...(cur[event.seriesId] ?? { winner: '', games: 4 }), winner: event.winner },
+    });
   }
 
-  onGamesChange(seriesId: number, games: number) {
+  onGamesChange(event: { seriesId: number; games: number }) {
     const cur = this.predictionDraft();
-    this.predictionDraft.set({ ...cur, [seriesId]: { ...(cur[seriesId] ?? { winner: '', games: 4 }), games } });
+    this.predictionDraft.set({
+      ...cur,
+      [event.seriesId]: { ...(cur[event.seriesId] ?? { winner: '', games: 4 }), games: event.games },
+    });
   }
 
-  get hasOpenSeries(): boolean {
-    return this.series().some(s => this.isSeriesOpen(s));
-  }
-
-  get hasAnyPrediction(): boolean {
+  /**
+   * True when the current draft differs from the last-saved state for at least
+   * one open series.  Drives the visibility of the Save button.
+   */
+  get hasDirtyPredictions(): boolean {
+    const current = this.predictionDraft();
+    const saved   = this.savedDraft();
     return this.series().some(s => {
-      const pred = this.predictionDraft()[s.id];
-      return this.isSeriesOpen(s) && pred?.winner;
+      if (s.predictionsLocked) return false;
+      const cur = current[s.id];
+      const sav = saved[s.id];
+      return cur?.winner !== sav?.winner || cur?.games !== sav?.games;
     });
   }
 
   saveAll() {
     if (this.saving()) return;
+    const draft = this.predictionDraft();
     const calls = this.series()
-      .filter(s => this.isSeriesOpen(s) && this.predictionDraft()[s.id]?.winner)
+      .filter(s => !s.predictionsLocked && draft[s.id]?.winner)
       .map(s => {
-        const pred = this.predictionDraft()[s.id]!;
+        const pred = draft[s.id]!;
         return this.api.submitPrediction(s.id, pred.winner, pred.games);
       });
     if (calls.length === 0) return;
@@ -212,6 +178,7 @@ export class SeriesComponent implements OnInit {
     forkJoin(calls).subscribe({
       next: () => {
         this.saving.set(false);
+        this.savedDraft.set(JSON.parse(JSON.stringify(this.predictionDraft())));
         this.snackBar.open('Predictions saved! 🎯', 'OK', { duration: 3000 });
       },
       error: (err) => {
@@ -219,47 +186,5 @@ export class SeriesComponent implements OnInit {
         this.snackBar.open(err.error?.error || 'Failed to save', 'OK', { duration: 4000 });
       },
     });
-  }
-
-  // ── Locked view helpers ────────────────────────────────────────────────────
-  getAllPredsForSeries(seriesId: number): { teamId: number; teamName: string; pred: any }[] {
-    return this.allTeams().map(team => ({
-      teamId:   team.teamId,
-      teamName: team.teamName,
-      pred: this.allTeamPredictions().find(
-        (p: any) => p.series?.id === seriesId && p.team?.id === team.teamId
-      ) ?? null,
-    }));
-  }
-
-  /** Returns a stable color index (0–9) for each pool team, matching the badge palette. */
-  teamColorIndex(teamId: number): number {
-    const idx = this.allTeams().findIndex((t: any) => t.teamId === teamId);
-    return idx === -1 ? 0 : idx % 10;
-  }
-
-  getLogoForAbbrev(s: any, abbrev: string): string {
-    if (!abbrev) return '';
-    if (s.topSeedAbbrev === abbrev) return s.topSeedLogoUrl || '';
-    if (s.bottomSeedAbbrev === abbrev) return s.bottomSeedLogoUrl || '';
-    return '';
-  }
-
-  isMyTeam(teamId: number): boolean {
-    return this.auth.teamId() === teamId;
-  }
-
-  /** Returns earned prediction points for a finished series, or null if not over / no pred. */
-  getSeriesPoints(s: any, pred: any | null): { winnerPts: number; gamesPts: number; total: number } | null {
-    if (!s.winnerAbbrev || !pred) return null;
-    const roundNumber: number = s.round?.roundNumber ?? this.selectedRound();
-    const rule = this.predScoringRules().find((r: any) => r.roundNumber === roundNumber);
-    if (!rule) return null;
-    const correctWinner = pred.predictedWinnerAbbrev === s.winnerAbbrev;
-    if (!correctWinner) return { winnerPts: 0, gamesPts: 0, total: 0 };
-    const winnerPts = rule.correctWinnerPoints ?? 0;
-    const exactGames = pred.predictedGames === (s.topSeedWins + s.bottomSeedWins);
-    const gamesPts = exactGames ? (rule.correctGamesBonus ?? 0) : 0;
-    return { winnerPts, gamesPts, total: winnerPts + gamesPts };
   }
 }

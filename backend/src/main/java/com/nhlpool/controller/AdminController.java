@@ -133,18 +133,10 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
-    // Round management
+    // Round management — read-only; status is auto-computed by SeriesSyncService
     @GetMapping("/rounds")
     public ResponseEntity<List<PoolRound>> getRounds() {
         return ResponseEntity.ok(poolRoundRepository.findAll());
-    }
-
-    @PutMapping("/rounds/{id}/status")
-    public ResponseEntity<PoolRound> updateRoundStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        PoolRound round = poolRoundRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Round not found"));
-        round.setStatus(RoundStatus.valueOf(body.get("status")));
-        return ResponseEntity.ok(poolRoundRepository.save(round));
     }
 
     // Bracket
