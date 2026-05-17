@@ -54,4 +54,5 @@ tasks.withType(Test) {
 // Memory-optimized bootRun for local dev
 bootRun {
     jvmArgs = ['-Xmx256m', '-XX:+UseSerialGC']
+    systemProperty 'spring.profiles.active', 'local'
 }

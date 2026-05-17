@@ -5,6 +5,7 @@ backend/.gradle/
 backend/build/
 backend/bin/
 backend/.idea/
+backend/src/main/resources/application-local.yml
 
 # Frontend
 frontend/node_modules/
