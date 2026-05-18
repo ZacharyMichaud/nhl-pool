@@ -331,6 +331,13 @@ $mobile: 768px;
 
 .strip-no-pred { font-size: 11px; color: var(--text-muted); }
 
+.strip-team-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
 .strip-pts {
   font-size: 10px; font-weight: 800;
   padding: 1px 5px; border-radius: 4px; margin-left: 1px;
@@ -357,12 +364,12 @@ $mobile: 768px;
 
 .pick-row {
   display: grid;
-  grid-template-columns: minmax(80px, 1fr) 64px 34px 32px;
+  grid-template-columns: minmax(60px, 1fr) 56px 34px 32px;
   align-items: center;
   padding: 7px 14px;
   font-size: 12px;
   transition: background 0.12s;
-  gap: 4px;
+  gap: 6px;
 
   &:hover { background: rgba(255,255,255,0.03); }
 
@@ -374,6 +381,15 @@ $mobile: 768px;
 
   &.correct .pick-winner { color: #4ade80; }
   &.wrong   .pick-winner { color: var(--danger); }
+}
+
+.pick-team-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pick-winner {

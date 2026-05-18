@@ -77,52 +77,71 @@
       </button>
     </div>
 
-    <!-- West / East columns -->
-    <div class="conference-grid" *ngIf="series().length > 0; else noSeries">
-
-      <!-- WESTERN -->
-      <div class="conf-col">
-        <div class="conf-label west-label">🏒 Western</div>
-        <div class="series-stack" *ngIf="westSeries().length > 0; else noWest">
-          <app-series-card-list
-            [series]="westSeries()"
-            [seriesGames]="seriesGames()"
-            [predictionDraft]="predictionDraft()"
-            [allTeams]="allTeams()"
-            [allTeamPredictions]="allTeamPredictions()"
-            [predScoringRules]="predScoringRules()"
-            [selectedRound]="selectedRound()"
-            (winnerChange)="onWinnerChange($event)"
-            (gamesChange)="onGamesChange($event)">
-          </app-series-card-list>
-        </div>
-        <ng-template #noWest>
-          <div class="conf-empty">No Western series</div>
-        </ng-template>
+    <!-- Stanley Cup Final: no conference split, just the one matchup -->
+    <ng-container *ngIf="selectedRound() === 4; else conferenceView">
+      <div *ngIf="series().length > 0; else noSeries" class="final-series-wrap">
+        <app-series-card-list
+          [series]="series()"
+          [seriesGames]="seriesGames()"
+          [predictionDraft]="predictionDraft()"
+          [allTeams]="allTeams()"
+          [allTeamPredictions]="allTeamPredictions()"
+          [predScoringRules]="predScoringRules()"
+          [selectedRound]="selectedRound()"
+          (winnerChange)="onWinnerChange($event)"
+          (gamesChange)="onGamesChange($event)">
+        </app-series-card-list>
       </div>
+    </ng-container>
 
-      <!-- EASTERN -->
-      <div class="conf-col">
-        <div class="conf-label east-label">🏒 Eastern</div>
-        <div class="series-stack" *ngIf="eastSeries().length > 0; else noEast">
-          <app-series-card-list
-            [series]="eastSeries()"
-            [seriesGames]="seriesGames()"
-            [predictionDraft]="predictionDraft()"
-            [allTeams]="allTeams()"
-            [allTeamPredictions]="allTeamPredictions()"
-            [predScoringRules]="predScoringRules()"
-            [selectedRound]="selectedRound()"
-            (winnerChange)="onWinnerChange($event)"
-            (gamesChange)="onGamesChange($event)">
-          </app-series-card-list>
+    <!-- Rounds 1–3: West / East conference columns -->
+    <ng-template #conferenceView>
+      <div class="conference-grid" *ngIf="series().length > 0; else noSeries">
+
+        <!-- WESTERN -->
+        <div class="conf-col">
+          <div class="conf-label west-label">🏒 Western</div>
+          <div class="series-stack" *ngIf="westSeries().length > 0; else noWest">
+            <app-series-card-list
+              [series]="westSeries()"
+              [seriesGames]="seriesGames()"
+              [predictionDraft]="predictionDraft()"
+              [allTeams]="allTeams()"
+              [allTeamPredictions]="allTeamPredictions()"
+              [predScoringRules]="predScoringRules()"
+              [selectedRound]="selectedRound()"
+              (winnerChange)="onWinnerChange($event)"
+              (gamesChange)="onGamesChange($event)">
+            </app-series-card-list>
+          </div>
+          <ng-template #noWest>
+            <div class="conf-empty">No Western series</div>
+          </ng-template>
         </div>
-        <ng-template #noEast>
-          <div class="conf-empty">No Eastern series</div>
-        </ng-template>
-      </div>
 
-    </div>
+        <!-- EASTERN -->
+        <div class="conf-col">
+          <div class="conf-label east-label">🏒 Eastern</div>
+          <div class="series-stack" *ngIf="eastSeries().length > 0; else noEast">
+            <app-series-card-list
+              [series]="eastSeries()"
+              [seriesGames]="seriesGames()"
+              [predictionDraft]="predictionDraft()"
+              [allTeams]="allTeams()"
+              [allTeamPredictions]="allTeamPredictions()"
+              [predScoringRules]="predScoringRules()"
+              [selectedRound]="selectedRound()"
+              (winnerChange)="onWinnerChange($event)"
+              (gamesChange)="onGamesChange($event)">
+            </app-series-card-list>
+          </div>
+          <ng-template #noEast>
+            <div class="conf-empty">No Eastern series</div>
+          </ng-template>
+        </div>
+
+      </div>
+    </ng-template>
 
     <ng-template #noSeries>
       <div class="card empty-state">

@@ -98,7 +98,7 @@
           [class.strip-correct]="entry.pred && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
           [class.strip-wrong]="entry.pred && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev"
           [class.strip-no-pick]="!entry.pred">
-          <app-pool-badge [name]="entry.teamName" [colorIndex]="teamColorIndex(entry.teamId)"></app-pool-badge>
+          <span class="strip-team-name">{{ entry.teamName }}</span>
           <ng-container *ngIf="entry.pred; else noPredMark">
             <span *ngIf="entry.pred.predictedWinnerAbbrev === s.winnerAbbrev" class="mark-correct">✓</span>
             <span *ngIf="entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev" class="mark-wrong">✗</span>
@@ -130,7 +130,7 @@
           [class.my-row]="isMyTeam(entry.teamId)"
           [class.correct]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
           [class.wrong]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">
-          <app-pool-badge [name]="entry.teamName" [colorIndex]="teamColorIndex(entry.teamId)"></app-pool-badge>
+          <span class="pick-team-name">{{ entry.teamName }}</span>
 
           <!-- Winner pick -->
           <span class="pick-winner" *ngIf="entry.pred">
