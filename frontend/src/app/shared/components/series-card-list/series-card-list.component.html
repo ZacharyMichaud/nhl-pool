@@ -3,7 +3,8 @@
 
     <!-- Status bar: only shown when series has a winner -->
     <div class="series-status complete" *ngIf="s.winnerAbbrev">
-      🏆 {{ s.winnerAbbrev }} wins in {{ s.topSeedWins + s.bottomSeedWins }} games
+      <img [src]="getLogoForAbbrev(s, s.winnerAbbrev)" class="status-winner-logo" onerror="this.style.display='none'">
+      {{ s.winnerAbbrev }} wins in {{ s.topSeedWins + s.bottomSeedWins }} games
     </div>
 
     <!-- Matchup scores -->
@@ -90,36 +91,6 @@
       </div>
     </ng-container>
 
-    <!-- Pick-result strip: compact summary shown when series is done + locked -->
-    <ng-container *ngIf="s.winnerAbbrev && isPicksRevealed(s)">
-      <div class="pick-result-strip">
-        <div *ngFor="let entry of getAllPredsForSeries(s.id)"
-          class="strip-entry"
-          [class.strip-correct]="entry.pred && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
-          [class.strip-wrong]="entry.pred && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev"
-          [class.strip-no-pick]="!entry.pred">
-          <span class="strip-team-name">{{ entry.teamName }}</span>
-          <ng-container *ngIf="entry.pred; else noPredMark">
-            <span *ngIf="entry.pred.predictedWinnerAbbrev === s.winnerAbbrev" class="mark-correct">✓</span>
-            <span *ngIf="entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev" class="mark-wrong">✗</span>
-            <span class="strip-games"
-              [class.strip-games-exact]="entry.pred.predictedGames === (s.topSeedWins + s.bottomSeedWins)">
-              {{ entry.pred.predictedGames }}G
-            </span>
-            <ng-container *ngIf="getSeriesPoints(s, entry.pred) as pts">
-              <span class="strip-pts"
-                [class.strip-pts-win]="pts.total > 0"
-                [class.strip-pts-bonus]="pts.gamesPts > 0"
-                [class.strip-pts-zero]="pts.total === 0">
-                +{{ pts.total }}
-              </span>
-            </ng-container>
-          </ng-container>
-          <ng-template #noPredMark><span class="strip-no-pred">—</span></ng-template>
-        </div>
-      </div>
-    </ng-container>
-
     <div class="card-divider"></div>
 
     <!-- LOCKED: predictions comparison table -->
@@ -130,7 +101,7 @@
           [class.my-row]="isMyTeam(entry.teamId)"
           [class.correct]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev === s.winnerAbbrev"
           [class.wrong]="entry.pred && s.winnerAbbrev && entry.pred.predictedWinnerAbbrev !== s.winnerAbbrev">
-          <span class="pick-team-name">{{ entry.teamName }}</span>
+          <app-pool-badge [name]="entry.teamName" [colorIndex]="teamColorIndex(entry.teamId)"></app-pool-badge>
 
           <!-- Winner pick -->
           <span class="pick-winner" *ngIf="entry.pred">
