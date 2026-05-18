@@ -58,7 +58,7 @@
   <!-- ── Series section (desktop only) ──────────────────────────────────── -->
   <div class="series-section desktop-only">
 
-    <!-- Header row with round picker -->
+    <!-- Header row with round picker + save button -->
     <div class="series-header">
       <app-dropdown
         id="standings-round-select"
@@ -67,6 +67,14 @@
         (valueChange)="selectRound($event)"
         placeholder="Select round…">
       </app-dropdown>
+
+      <button
+        *ngIf="hasDirtyPredictions"
+        class="btn-save-predictions"
+        [disabled]="saving()"
+        (click)="saveAll()">
+        {{ saving() ? 'Saving…' : '💾 Save Predictions' }}
+      </button>
     </div>
 
     <!-- West / East columns -->

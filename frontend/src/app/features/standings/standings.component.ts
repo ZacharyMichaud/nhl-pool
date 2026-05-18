@@ -6,6 +6,7 @@ import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { DraftEventService } from '../../core/draft-event.service';
 import { LiveGameService } from '../../core/live-game.service';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { DropdownComponent } from '../../shared/components/dropdown/dropdown.component';
 import { DropdownOption } from '../../shared/components/dropdown/dropdown.types';
 import { PoolBadgeComponent } from '../../shared/components/pool-badge/pool-badge.component';
@@ -22,7 +23,7 @@ const WESTERN_TEAMS = new Set([
 @Component({
   selector: 'app-standings',
   standalone: true,
-  imports: [CommonModule, DropdownComponent, PoolBadgeComponent, SeriesCardListComponent],
+  imports: [CommonModule, MatSnackBarModule, DropdownComponent, PoolBadgeComponent, SeriesCardListComponent],
   templateUrl: './standings.component.html',
   styleUrl: './standings.component.scss',
 })
@@ -32,6 +33,7 @@ export class StandingsComponent implements OnInit, OnDestroy {
   protected auth = inject(AuthService);
   private draftEvent = inject(DraftEventService);
   protected liveGame = inject(LiveGameService);
+  private snackBar   = inject(MatSnackBar);
   private statsSub?: Subscription;
 
   standings         = signal<any[]>([]);
@@ -43,6 +45,8 @@ export class StandingsComponent implements OnInit, OnDestroy {
   seriesGames       = signal<Record<number, any[]>>({});  // seriesId → SeriesGameSummary[]
   saving            = signal(false);
   predictionDraft   = signal<Record<number, { winner: string; games: number } | undefined>>({});
+  /** Snapshot of predictions as last loaded/saved — drives the save button visibility. */
+  savedDraft        = signal<Record<number, { winner: string; games: number } | undefined>>({});
 
   readonly roundDropdownOptions: DropdownOption[] = [
     { value: 1, label: 'Round 1' },
@@ -206,6 +210,7 @@ export class StandingsComponent implements OnInit, OnDestroy {
         draft[s.id] = savedMap[s.id] ?? { winner: '', games: 4 };
       });
       this.predictionDraft.set(draft);
+      this.savedDraft.set(JSON.parse(JSON.stringify(draft)));
     });
   }
 
@@ -288,6 +293,46 @@ export class StandingsComponent implements OnInit, OnDestroy {
       { value: s.topSeedAbbrev,    label: s.topSeedAbbrev },
       { value: s.bottomSeedAbbrev, label: s.bottomSeedAbbrev },
     ];
+  }
+
+  /**
+   * True when the current draft differs from the last-saved state for at least
+   * one open (unlocked) series. Drives the visibility of the save button.
+   */
+  get hasDirtyPredictions(): boolean {
+    const current = this.predictionDraft();
+    const saved   = this.savedDraft();
+    return this.series().some(s => {
+      if (s.predictionsLocked) return false;
+      const cur = current[s.id];
+      const sav = saved[s.id];
+      return cur?.winner !== sav?.winner || cur?.games !== sav?.games;
+    });
+  }
+
+  saveAll() {
+    if (this.saving()) return;
+    const draft = this.predictionDraft();
+    const calls = this.series()
+      .filter(s => !s.predictionsLocked && draft[s.id]?.winner)
+      .map(s => {
+        const pred = draft[s.id]!;
+        return this.api.submitPrediction(s.id, pred.winner, pred.games);
+      });
+    if (calls.length === 0) return;
+
+    this.saving.set(true);
+    forkJoin(calls).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.savedDraft.set(JSON.parse(JSON.stringify(this.predictionDraft())));
+        this.snackBar.open('Predictions saved! 🎯', 'OK', { duration: 3000 });
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.snackBar.open(err.error?.error || 'Failed to save', 'OK', { duration: 4000 });
+      },
+    });
   }
 
   onWinnerChange(event: { seriesId: number; winner: string }) {

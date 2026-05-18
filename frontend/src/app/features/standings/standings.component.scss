@@ -20,6 +20,27 @@
   gap: 16px;
 }
 
+.btn-save-predictions {
+  background: linear-gradient(135deg, var(--accent) 0%, #0088cc 100%);
+  color: #000;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0, 195, 255, 0.4);
+  }
+
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
 .series-heading {
   font-size: 16px;
   font-weight: 800;
