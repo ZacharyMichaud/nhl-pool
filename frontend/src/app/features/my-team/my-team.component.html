@@ -28,9 +28,9 @@
 
           <div class="accordion-left">
             <span class="rank-chip"
-              [style.background]="'rgba(' + hexToRgb(rankColor(i)) + ', 0.18)'"
-              [style.color]="rankColor(i)"
-              [style.box-shadow]="'0 2px 8px rgba(' + hexToRgb(rankColor(i)) + ', 0.35)'">{{ i + 1 }}</span>
+              [style.background]="'rgba(' + hexToRgb(rankColor(team.teamId)) + ', 0.18)'"
+              [style.color]="rankColor(team.teamId)"
+              [style.box-shadow]="'0 2px 8px rgba(' + hexToRgb(rankColor(team.teamId)) + ', 0.35)'">{{ i + 1 }}</span>
             <div class="accordion-name-block">
               <span class="accordion-team-name">{{ team.teamName }}</span>
               <span class="accordion-members">{{ team.memberNames?.join(' & ') }}</span>

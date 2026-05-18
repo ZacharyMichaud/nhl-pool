@@ -186,8 +186,7 @@ export class SeriesCardListComponent implements OnChanges {
   }
 
   teamColorIndex(teamId: number): number {
-    const idx = this.allTeams.findIndex((t: any) => t.teamId === teamId);
-    return idx === -1 ? 0 : idx % 10;
+    return (teamId - 1) % 10;
   }
 
   isMyTeam(teamId: number): boolean { return this.auth.teamId() === teamId; }

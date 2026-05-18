@@ -357,8 +357,7 @@ export class StandingsComponent implements OnInit, OnDestroy {
 
   /** Returns a stable color index (0–9) for each pool team, matching the badge palette. */
   teamColorIndex(teamId: number): number {
-    const idx = this.allTeams().findIndex((t: any) => t.teamId === teamId);
-    return idx === -1 ? 0 : idx % 10;
+    return (teamId - 1) % 10;
   }
 
   /**
@@ -370,8 +369,8 @@ export class StandingsComponent implements OnInit, OnDestroy {
     '#fb923c', '#f472b6', '#34d399', '#60a5fa', '#fbbf24',
   ];
 
-  rankColor(i: number): string {
-    return StandingsComponent.BADGE_COLORS[i % 10];
+  rankColor(teamId: number): string {
+    return StandingsComponent.BADGE_COLORS[(teamId - 1) % 10];
   }
 
   /** Converts a '#rrggbb' hex string to 'r, g, b' for use in rgba() expressions. */

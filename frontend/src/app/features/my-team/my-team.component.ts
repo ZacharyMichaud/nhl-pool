@@ -76,8 +76,8 @@ export class MyTeamComponent implements OnInit, OnDestroy {
 
   teamColorMap = computed<Record<number, string>>(() => {
     const map: Record<number, string> = {};
-    this.allTeams().forEach((t: any, i: number) => {
-      map[t.teamId] = POOL_TEAM_PALETTE[i % POOL_TEAM_PALETTE.length];
+    this.allTeams().forEach((t: any) => {
+      map[t.teamId] = POOL_TEAM_PALETTE[(t.teamId - 1) % POOL_TEAM_PALETTE.length];
     });
     return map;
   });
@@ -86,9 +86,9 @@ export class MyTeamComponent implements OnInit, OnDestroy {
     return this.teamColorMap()[teamId] ?? '#00C3FF';
   }
 
-  /** Returns the badge-palette hex colour for the 0-based standings index `i`. */
-  rankColor(i: number): string {
-    return POOL_TEAM_PALETTE[i % POOL_TEAM_PALETTE.length];
+  /** Returns the badge-palette hex colour keyed by teamId (stable across rank changes). */
+  rankColor(teamId: number): string {
+    return POOL_TEAM_PALETTE[(teamId - 1) % POOL_TEAM_PALETTE.length];
   }
 
   /** Converts a '#rrggbb' hex string to 'r, g, b' for use in rgba() expressions. */

@@ -100,9 +100,8 @@ export class PlayersComponent implements OnInit, OnDestroy {
   }
 
   teamColorIndex(teamId: number | undefined | null): number {
-    const teams = this.poolTeams();
-    const idx = teams.findIndex(t => t.id === teamId);
-    return idx === -1 ? 0 : idx % 10;
+    if (teamId == null) return 0;
+    return (teamId - 1) % 10;
   }
 
   formatPosition(pos: string | null | undefined): string {
