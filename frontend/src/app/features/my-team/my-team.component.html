@@ -151,6 +151,63 @@
             </ng-template>
 
           </div>
+
+          <!-- ── Series Predictions (round by round) ────────────────────── -->
+          <ng-container *ngIf="seriesByRound().length > 0">
+            <div class="pred-section">
+              <div class="pred-section-heading">
+                <span class="pred-section-title">Series Predictions</span>
+              </div>
+
+              <div *ngFor="let rg of seriesByRound()" class="pred-round-block">
+                <div class="pred-round-label">{{ rg.label }}</div>
+
+                <div class="pred-compact-grid">
+                  <div *ngFor="let s of rg.series" class="pred-compact-row">
+
+                    <!-- Matchup logos + score -->
+                    <div class="pred-matchup-mini">
+                      <img [src]="s.topSeedLogoUrl" class="pred-mini-logo"
+                           [class.pred-logo-winner]="s.winnerAbbrev === s.topSeedAbbrev"
+                           [class.pred-logo-loser]="s.winnerAbbrev && s.winnerAbbrev !== s.topSeedAbbrev"
+                           onerror="this.style.display='none'">
+                      <span class="pred-mini-score">{{ s.topSeedWins }}–{{ s.bottomSeedWins }}</span>
+                      <img [src]="s.bottomSeedLogoUrl" class="pred-mini-logo"
+                           [class.pred-logo-winner]="s.winnerAbbrev === s.bottomSeedAbbrev"
+                           [class.pred-logo-loser]="s.winnerAbbrev && s.winnerAbbrev !== s.bottomSeedAbbrev"
+                           onerror="this.style.display='none'">
+                    </div>
+
+                    <!-- Pick info -->
+                    <ng-container *ngIf="getPredForTeam(team.teamId, s.id) as pred; else noPrediction">
+                      <div class="pred-pick-info"
+                           [class.pred-pick-correct]="s.winnerAbbrev && pred.predictedWinnerAbbrev === s.winnerAbbrev"
+                           [class.pred-pick-wrong]="s.winnerAbbrev && pred.predictedWinnerAbbrev !== s.winnerAbbrev">
+                        <img [src]="getLogoForAbbrev(s, pred.predictedWinnerAbbrev)"
+                             class="pred-pick-logo"
+                             onerror="this.style.display='none'">
+                        <span class="pred-pick-winner">{{ pred.predictedWinnerAbbrev }}</span>
+                        <span class="pred-pick-games"
+                              [class.pred-games-exact]="getSeriesPoints(s, pred)?.gamesPts ?? 0 > 0">in {{ pred.predictedGames }}G</span>
+                      </div>
+                      <app-pred-pts-badge
+                        [total]="getSeriesPoints(s, pred)?.total ?? null">
+                      </app-pred-pts-badge>
+                    </ng-container>
+
+                    <ng-template #noPrediction>
+                      <div class="pred-pick-info pred-no-pick-row">
+                        <span class="pred-no-pick-text">No pick</span>
+                      </div>
+                      <app-pred-pts-badge [total]="s.winnerAbbrev ? 0 : null"></app-pred-pts-badge>
+                    </ng-template>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
         </div>
       </div>
     </div>

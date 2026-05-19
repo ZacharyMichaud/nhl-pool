@@ -123,16 +123,11 @@
           <span class="pick-games" *ngIf="!entry.pred">—</span>
 
           <!-- Points earned -->
-          <ng-container *ngIf="s.winnerAbbrev && entry.pred; else noPoints">
-            <ng-container *ngIf="getSeriesPoints(s, entry.pred) as pts">
-              <span class="pick-pts"
-                [class.pts-earned]="pts.total > 0"
-                [class.pts-zero]="pts.total === 0">
-                {{ pts.total }}
-              </span>
-            </ng-container>
-          </ng-container>
-          <ng-template #noPoints><span class="pick-pts pts-none">—</span></ng-template>
+          <app-pred-pts-badge
+            [total]="s.winnerAbbrev && entry.pred
+              ? (getSeriesPoints(s, entry.pred)?.total ?? null)
+              : null">
+          </app-pred-pts-badge>
 
         </div>
       </div>

@@ -775,3 +775,134 @@
     cursor: not-allowed;
   }
 }
+
+// ── Series Predictions Section ───────────────────────────────────────────────
+.pred-section {
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.pred-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+
+  .pred-section-icon { font-size: 16px; }
+}
+
+.pred-section-title {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.pred-round-block {
+  margin-bottom: 16px;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.pred-round-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--accent);
+  margin-bottom: 6px;
+  padding: 0 2px;
+}
+
+.pred-compact-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+// Each series row: [matchup] [pick + pts] aligned in 3 cols
+.pred-compact-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  transition: background 0.15s;
+
+  &:hover { background: rgba(255,255,255,0.04); }
+}
+
+// Left: two logos + score
+.pred-matchup-mini {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.pred-mini-logo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  transition: opacity 0.2s;
+
+  &.pred-logo-winner { opacity: 1; }
+  &.pred-logo-loser  { opacity: 0.28; }
+}
+
+.pred-mini-score {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+  min-width: 28px;
+  text-align: center;
+}
+
+// Middle: pick details
+.pred-pick-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+
+  &.pred-pick-correct .pred-pick-winner { color: #4ade80; }
+  &.pred-pick-wrong   .pred-pick-winner { color: var(--danger, #ef4444); }
+  &.pred-no-pick-row  { opacity: 0.5; }
+}
+
+.pred-pick-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.pred-pick-winner {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.pred-pick-games {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.pred-no-pick-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+
+.pred-games-exact {
+  color: #fbbf24;
+  font-weight: 800;
+}

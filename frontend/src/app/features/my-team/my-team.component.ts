@@ -1,70 +1,95 @@
-import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ActivatedRoute } from '@angular/router';
-import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, forkJoin, of, Subject, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { LiveGameService } from '../../core/live-game.service';
 import { PlayerCardComponent } from '../../shared/components/player-card/player-card.component';
-
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { PredPtsBadgeComponent } from '../../shared/components/pred-pts-badge/pred-pts-badge.component';
 
 /** Primary colors for each NHL team, keyed by 3-letter abbreviation. */
 const NHL_TEAM_COLORS: Record<string, { bg: string; light: boolean }> = {
-  ANA: { bg: '#F47A38', light: false }, ARI: { bg: '#8C2633', light: true  },
-  BOS: { bg: '#FFB81C', light: false }, BUF: { bg: '#003087', light: true  },
-  CGY: { bg: '#C8102E', light: true  }, CAR: { bg: '#CC0000', light: true  },
-  CHI: { bg: '#CF0A2C', light: true  }, COL: { bg: '#6F263D', light: true  },
-  CBJ: { bg: '#002654', light: true  }, DAL: { bg: '#006847', light: true  },
-  DET: { bg: '#CE1126', light: true  }, EDM: { bg: '#FF4C00', light: false },
-  FLA: { bg: '#041E42', light: true  }, LAK: { bg: '#111111', light: true  },
-  MIN: { bg: '#154734', light: true  }, MTL: { bg: '#AF1E2D', light: true  },
-  NSH: { bg: '#FFB81C', light: false }, NJD: { bg: '#CE1126', light: true  },
-  NYI: { bg: '#00539B', light: true  }, NYR: { bg: '#0038A8', light: true  },
-  OTT: { bg: '#C52032', light: true  }, PHI: { bg: '#F74902', light: false },
-  PIT: { bg: '#FCB514', light: false }, SEA: { bg: '#001628', light: true  },
-  SJS: { bg: '#006D75', light: true  }, STL: { bg: '#002F87', light: true  },
-  TBL: { bg: '#002868', light: true  }, TOR: { bg: '#003E7E', light: true  },
-  UTA: { bg: '#71AFE5', light: false }, VAN: { bg: '#00843D', light: true  },
-  VGK: { bg: '#B4975A', light: false }, WSH: { bg: '#CF0A2C', light: true  },
-  WPG: { bg: '#041E42', light: true  },
+  ANA: { bg: '#F47A38', light: false }, ARI: { bg: '#8C2633', light: true },
+  BOS: { bg: '#FFB81C', light: false }, BUF: { bg: '#003087', light: true },
+  CGY: { bg: '#C8102E', light: true }, CAR: { bg: '#CC0000', light: true },
+  CHI: { bg: '#CF0A2C', light: true }, COL: { bg: '#6F263D', light: true },
+  CBJ: { bg: '#002654', light: true }, DAL: { bg: '#006847', light: true },
+  DET: { bg: '#CE1126', light: true }, EDM: { bg: '#FF4C00', light: false },
+  FLA: { bg: '#041E42', light: true }, LAK: { bg: '#111111', light: true },
+  MIN: { bg: '#154734', light: true }, MTL: { bg: '#AF1E2D', light: true },
+  NSH: { bg: '#FFB81C', light: false }, NJD: { bg: '#CE1126', light: true },
+  NYI: { bg: '#00539B', light: true }, NYR: { bg: '#0038A8', light: true },
+  OTT: { bg: '#C52032', light: true }, PHI: { bg: '#F74902', light: false },
+  PIT: { bg: '#FCB514', light: false }, SEA: { bg: '#001628', light: true },
+  SJS: { bg: '#006D75', light: true }, STL: { bg: '#002F87', light: true },
+  TBL: { bg: '#002868', light: true }, TOR: { bg: '#003E7E', light: true },
+  UTA: { bg: '#71AFE5', light: false }, VAN: { bg: '#00843D', light: true },
+  VGK: { bg: '#B4975A', light: false }, WSH: { bg: '#CF0A2C', light: true },
+  WPG: { bg: '#041E42', light: true }
 };
 
 /** Distinct accent colors for pool teams (assigned by index in standings). */
 const POOL_TEAM_PALETTE = [
   '#00C3FF', '#FF6B6B', '#FFD166', '#06D6A0', '#A78BFA',
   '#FB923C', '#F472B6', '#34D399', '#60A5FA', '#FBBF24',
-  '#E879F9', '#4ADE80',
+  '#E879F9', '#4ADE80'
 ];
 
 @Component({
   selector: 'app-my-team',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatSnackBarModule, PlayerCardComponent],
+  imports: [CommonModule, FormsModule, MatSnackBarModule, PlayerCardComponent, PredPtsBadgeComponent],
   templateUrl: './my-team.component.html',
-  styleUrl: './my-team.component.scss',
+  styleUrl: './my-team.component.scss'
 })
 export class MyTeamComponent implements OnInit, OnDestroy {
-  private api      = inject(ApiService);
-  private el       = inject(ElementRef);
+  private api = inject(ApiService);
+  private el = inject(ElementRef);
   private snackBar = inject(MatSnackBar);
-  private route    = inject(ActivatedRoute);
-  protected auth   = inject(AuthService);
+  private route = inject(ActivatedRoute);
+  protected auth = inject(AuthService);
   protected liveGame = inject(LiveGameService);
 
   // ── Teams ─────────────────────────────────────────────────────────────────
-  allTeams       = signal<any[]>([]);
+  allTeams = signal<any[]>([]);
   selectedTeamId = signal<number | null>(null);
 
   // ── Draft config (for CS lock state) ──────────────────────────────────────
   draftConfig = signal<any>(null);
   connSmytheLocked = computed(() => !!this.draftConfig()?.connSmytheLocked);
 
+  // ── Series predictions ────────────────────────────────────────────────────
+  allSeries = signal<any[]>([]);
+  allTeamPredictions = signal<any[]>([]);
+  predScoringRules = signal<any[]>([]);
+
+  /** Series grouped by round number, sorted by round ascending. */
+  seriesByRound = computed<{ round: number; label: string; series: any[] }[]>(() => {
+    const groups: Record<number, any[]> = {};
+    for (const s of this.allSeries()) {
+      const rn: number = s.round?.roundNumber ?? 0;
+      if (!groups[rn]) {
+        groups[rn] = [];
+      }
+      groups[rn].push(s);
+    }
+    const ROUND_LABELS: Record<number, string> = {
+      1: 'Round 1', 2: 'Round 2', 3: 'Conf Finals', 4: 'Stanley Cup Final'
+    };
+    return Object.keys(groups)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map(rn => ({ round: rn, label: ROUND_LABELS[rn] ?? `Round ${ rn }`, series: groups[rn] }));
+  });
+
   // ── Conn Smythe search (only shown when unlocked on own team) ─────────────
-  csSearch       = signal('');
-  csResults      = signal<any[]>([]);
-  csSaving       = signal(false);
+  csSearch = signal('');
+  csResults = signal<any[]>([]);
+  csSaving = signal(false);
   csShowDropdown = signal(false);
 
   private searchSubject = new Subject<string>();
@@ -96,7 +121,7 @@ export class MyTeamComponent implements OnInit, OnDestroy {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
-    return `${r}, ${g}, ${b}`;
+    return `${ r }, ${ g }, ${ b }`;
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -104,6 +129,7 @@ export class MyTeamComponent implements OnInit, OnDestroy {
     const paramTeamId = this.route.snapshot.queryParamMap.get('teamId');
     this.loadTeams(paramTeamId ? Number(paramTeamId) : null);
     this.loadDraftConfig();
+    this.loadSeriesPredictions();
 
     this.searchSubject.pipe(
       debounceTime(300),
@@ -120,6 +146,25 @@ export class MyTeamComponent implements OnInit, OnDestroy {
   // ── Data loading ──────────────────────────────────────────────────────────
   loadDraftConfig() {
     this.api.getDraftConfig().subscribe({ next: cfg => this.draftConfig.set(cfg), error: () => {} });
+  }
+
+  loadSeriesPredictions() {
+    forkJoin({
+      series: this.api.getAllSeries().pipe(catchError(() => of([]))),
+      rules: this.api.getPredictionScoringRules().pipe(catchError(() => of([])))
+    }).subscribe(({ series, rules }) => {
+      this.allSeries.set(series);
+      this.predScoringRules.set(rules);
+      // Load all-team predictions for each unique round
+      const rounds = [...new Set<number>(series.map((s: any) => s.round?.roundNumber).filter(Boolean))];
+      const calls = rounds.map(r => this.api.getAllTeamsPredictions(r).pipe(catchError(() => of([]))));
+      if (calls.length === 0) {
+        return;
+      }
+      forkJoin(calls).subscribe((results: any[][]) => {
+        this.allTeamPredictions.set(results.flat());
+      });
+    });
   }
 
   loadTeams(preselectedTeamId: number | null = null) {
@@ -156,6 +201,59 @@ export class MyTeamComponent implements OnInit, OnDestroy {
     return this.auth.teamId() === teamId;
   }
 
+  // ── Predictions helpers ───────────────────────────────────────────────────
+
+  /** Returns the prediction entry for a specific pool team + series, or null. */
+  getPredForTeam(teamId: number, seriesId: number): any | null {
+    return this.allTeamPredictions().find(
+      (p: any) => p.team?.id === teamId && p.series?.id === seriesId
+    ) ?? null;
+  }
+
+  /** Points earned for a finished series prediction. Returns null if series not over. */
+  getSeriesPoints(s: any, pred: any | null): { winnerPts: number; gamesPts: number; total: number } | null {
+    if (!s.winnerAbbrev || !pred) {
+      return null;
+    }
+    const roundNumber: number = s.round?.roundNumber ?? 0;
+    const rule = this.predScoringRules().find((r: any) => r.roundNumber === roundNumber);
+    if (!rule) {
+      return null;
+    }
+    const correctWinner = pred.predictedWinnerAbbrev === s.winnerAbbrev;
+    if (!correctWinner) {
+      return { winnerPts: 0, gamesPts: 0, total: 0 };
+    }
+    const winnerPts = rule.correctWinnerPoints ?? 0;
+    const exactGames = pred.predictedGames === (s.topSeedWins + s.bottomSeedWins);
+    const gamesPts = exactGames ? (rule.correctGamesBonus ?? 0) : 0;
+    return { winnerPts, gamesPts, total: winnerPts + gamesPts };
+  }
+
+  /** Total prediction points earned by a team across all finished series. */
+  getTotalPredPoints(teamId: number): number {
+    return this.allSeries()
+      .filter((s: any) => s.winnerAbbrev)
+      .reduce((sum, s) => {
+        const pred = this.getPredForTeam(teamId, s.id);
+        const pts = this.getSeriesPoints(s, pred);
+        return sum + (pts?.total ?? 0);
+      }, 0);
+  }
+
+  getLogoForAbbrev(s: any, abbrev: string): string {
+    if (!abbrev) {
+      return '';
+    }
+    if (s.topSeedAbbrev === abbrev) {
+      return s.topSeedLogoUrl || '';
+    }
+    if (s.bottomSeedAbbrev === abbrev) {
+      return s.bottomSeedLogoUrl || '';
+    }
+    return '';
+  }
+
   // ── NHL team color helpers ────────────────────────────────────────────────
   getTeamColor(abbrev: string): string {
     return NHL_TEAM_COLORS[abbrev?.toUpperCase()]?.bg ?? '#1e2530';
@@ -172,17 +270,17 @@ export class MyTeamComponent implements OnInit, OnDestroy {
    */
   csPlayerFrom(team: any): any {
     return {
-      fullName:                 team.connSmythePlayerName,
-      headshotUrl:              team.connSmytheHeadshotUrl,
-      position:                 team.connSmythePosition,
-      teamAbbrev:               team.connSmytheTeamAbbrev,
-      playoffGoals:             team.connSmytheGoals,
-      playoffAssists:           team.connSmytheAssists,
-      playoffGamesPlayed:       team.connSmytheGamesPlayed,
-      playoffPoints:            team.connSmythePoints,
-      playoffPowerPlayGoals:    team.connSmythePowerPlayGoals,
-      playoffPowerPlayPoints:   team.connSmythePowerPlayPoints,
-      playoffAvgToi:            team.connSmytheAvgToi,
+      fullName: team.connSmythePlayerName,
+      headshotUrl: team.connSmytheHeadshotUrl,
+      position: team.connSmythePosition,
+      teamAbbrev: team.connSmytheTeamAbbrev,
+      playoffGoals: team.connSmytheGoals,
+      playoffAssists: team.connSmytheAssists,
+      playoffGamesPlayed: team.connSmytheGamesPlayed,
+      playoffPoints: team.connSmythePoints,
+      playoffPowerPlayGoals: team.connSmythePowerPlayGoals,
+      playoffPowerPlayPoints: team.connSmythePowerPlayPoints,
+      playoffAvgToi: team.connSmytheAvgToi
     };
   }
 
@@ -198,7 +296,9 @@ export class MyTeamComponent implements OnInit, OnDestroy {
 
   pickCsPlayer(player: any) {
     const teamId = this.auth.teamId();
-    if (!teamId) return;
+    if (!teamId) {
+      return;
+    }
     this.csSearch.set(player.fullName);
     this.csResults.set([]);
     this.csShowDropdown.set(false);
@@ -207,7 +307,7 @@ export class MyTeamComponent implements OnInit, OnDestroy {
     this.api.setConnSmythe(teamId, player.id).subscribe({
       next: () => {
         this.csSaving.set(false);
-        this.snackBar.open(`Conn Smythe pick set to ${player.fullName}!`, 'OK', { duration: 3000 });
+        this.snackBar.open(`Conn Smythe pick set to ${ player.fullName }!`, 'OK', { duration: 3000 });
         this.loadTeams();
       },
       error: (err) => {

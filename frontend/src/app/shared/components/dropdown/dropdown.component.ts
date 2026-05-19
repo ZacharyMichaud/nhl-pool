@@ -77,22 +77,29 @@ export class DropdownComponent implements OnInit, OnDestroy {
     const trigger = this.el.nativeElement.querySelector('.dropdown-trigger') as HTMLElement;
     if (!trigger) return;
     const rect = trigger.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const panelHeight = Math.min(this.options.length * 44 + 8, 300);
-    if (spaceBelow >= panelHeight || spaceBelow >= 120) {
+    const MARGIN = 8; // px gap from viewport edge
+    const spaceBelow = window.innerHeight - rect.bottom - MARGIN;
+    const spaceAbove = rect.top - MARGIN;
+    const maxPanelHeight = 300;
+
+    if (spaceBelow >= spaceAbove || spaceBelow >= 120) {
+      // Open downward — clamp height to available space below
       this.panelStyle = {
         position: 'fixed',
         top: rect.bottom + 5 + 'px',
         left: rect.left + 'px',
         width: rect.width + 'px',
+        maxHeight: Math.min(maxPanelHeight, spaceBelow) + 'px',
         zIndex: '9999',
       };
     } else {
+      // Open upward — clamp height to available space above
       this.panelStyle = {
         position: 'fixed',
         bottom: (window.innerHeight - rect.top + 5) + 'px',
         left: rect.left + 'px',
         width: rect.width + 'px',
+        maxHeight: Math.min(maxPanelHeight, spaceAbove) + 'px',
         zIndex: '9999',
       };
     }

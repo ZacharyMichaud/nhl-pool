@@ -5,6 +5,7 @@ import { AuthService } from '../../../core/auth.service';
 import { DropdownComponent } from '../dropdown/dropdown.component';
 import { DropdownOption } from '../dropdown/dropdown.types';
 import { PoolBadgeComponent } from '../pool-badge/pool-badge.component';
+import { PredPtsBadgeComponent } from '../pred-pts-badge/pred-pts-badge.component';
 
 /**
  * Reusable list of series cards with sorting baked in.
@@ -17,7 +18,7 @@ import { PoolBadgeComponent } from '../pool-badge/pool-badge.component';
 @Component({
   selector: 'app-series-card-list',
   standalone: true,
-  imports: [CommonModule, DropdownComponent, PoolBadgeComponent],
+  imports: [CommonModule, DropdownComponent, PoolBadgeComponent, PredPtsBadgeComponent],
   templateUrl: './series-card-list.component.html',
   styleUrl: './series-card-list.component.scss',
 })

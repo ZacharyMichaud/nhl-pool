@@ -291,6 +291,7 @@
 
 .pm-elim-tag {
   display: inline-block;
+  align-self: flex-start;
   font-size: 10px;
   font-weight: 700;
   color: var(--danger);
