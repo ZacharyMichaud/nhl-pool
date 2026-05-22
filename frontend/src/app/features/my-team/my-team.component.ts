@@ -241,6 +241,30 @@ export class MyTeamComponent implements OnInit, OnDestroy {
       }, 0);
   }
 
+  /**
+   * Returns per-round prediction totals for a team.
+   * Only counts series that are finished (winnerAbbrev set).
+   * earnedWinner / maxWinner: winner prediction points.
+   * earnedGames / maxGames: games-bonus points.
+   */
+  getRoundPredStats(teamId: number, roundNumber: number, series: any[]): { earnedWinner: number; maxWinner: number; earnedGames: number; maxGames: number } | null {
+    const rule = this.predScoringRules().find((r: any) => r.roundNumber === roundNumber);
+    if (!rule) return null;
+    const finished = series.filter((s: any) => !!s.winnerAbbrev);
+    if (finished.length === 0) return null;
+    let earnedWinner = 0;
+    let earnedGames = 0;
+    for (const s of finished) {
+      const pred = this.getPredForTeam(teamId, s.id);
+      const pts = this.getSeriesPoints(s, pred);
+      earnedWinner += pts?.winnerPts ?? 0;
+      earnedGames  += pts?.gamesPts  ?? 0;
+    }
+    const maxWinner = finished.length * (rule.correctWinnerPoints ?? 0);
+    const maxGames  = finished.length * (rule.correctGamesBonus  ?? 0);
+    return { earnedWinner, maxWinner, earnedGames, maxGames };
+  }
+
   getLogoForAbbrev(s: any, abbrev: string): string {
     if (!abbrev) {
       return '';

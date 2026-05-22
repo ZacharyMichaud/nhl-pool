@@ -204,6 +204,19 @@
 
                   </div>
                 </div>
+
+                <!-- Round total row -->
+                <ng-container *ngIf="getRoundPredStats(team.teamId, rg.round, rg.series) as stats">
+                  <div class="pred-round-total">
+                    <span class="pred-round-total-pts">
+                      {{ stats.earnedWinner }}<span class="pred-round-total-max">/{{ stats.maxWinner }} pts</span>
+                    </span>
+                    <span class="pred-round-total-bonus" [class.pred-bonus-earned]="stats.earnedGames > 0">
+                      +{{ stats.earnedGames }}
+                    </span>
+                  </div>
+                </ng-container>
+
               </div>
             </div>
           </ng-container>
